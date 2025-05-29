@@ -33,7 +33,7 @@ pip install vllm-judge[dev]
 from vllm_judge import Judge
 
 # Initialize with vLLM url
-judge = await Judge.from_url("http://localhost:8000")
+judge = Judge.from_url("http://localhost:8000")
 
 # Simple evaluation
 result = await judge.evaluate(

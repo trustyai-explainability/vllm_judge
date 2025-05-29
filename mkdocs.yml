@@ -63,9 +63,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  # - Getting Started:
-  #   - Installation: getting-started/installation.md
-  #   - Quick Start: getting-started/quickstart.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
   #   - Core Concepts: getting-started/concepts.md
   # - User Guide:
   #   - Basic Evaluation: guide/basic-evaluation.md
