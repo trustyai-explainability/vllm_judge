@@ -15,16 +15,16 @@ A lightweight library for LLM-as-a-Judge evaluations using vLLM hosted models.
 
 ```bash
 # Basic installation
-pip install vllm_judge
+pip install vllm-judge
 
 # With API support
-pip install vllm_judge[api]
+pip install vllm-judge[api]
 
 # With Jinja2 template support
-pip install vllm_judge[jinja2]
+pip install vllm-judge[jinja2]
 
 # Everything
-pip install vllm_judge[api,jinja2]
+pip install vllm-judge[dev]
 ```
 
 ## Quick Start
