@@ -1,0 +1,90 @@
+site_name: vLLM Judge
+site_description: LLM-as-a-Judge evaluations for vLLM hosted models
+site_author: Sai Chandra Pandraju
+site_url: https://saichandrapandraju.github.io/vllm-judge
+repo_url: https://github.com/saichandrapandraju/vllm-judge
+
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.tabs.link
+    - content.code.annotation
+    - content.code.copy
+  language: en
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.arithmatex:
+      generic: true
+  - footnotes
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.mark
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Home: index.md
+  # - Getting Started:
+  #   - Installation: getting-started/installation.md
+  #   - Quick Start: getting-started/quickstart.md
+  #   - Core Concepts: getting-started/concepts.md
+  # - User Guide:
+  #   - Basic Evaluation: guide/basic-evaluation.md
+  #   - Using Metrics: guide/metrics.md
+  #   - Template Variables: guide/templates.md
+  #   - Batch Processing: guide/batch.md
+  #   - Advanced Usage: guide/advanced.md
+  # - API Server:
+  #   - Running the Server: api/server.md
+  #   - API Reference: api/reference.md
+  #   - Client Usage: api/client.md
+  #   - WebSocket API: api/websocket.md
+  # - Examples:
+  #   - Code Review: examples/code-review.md
+  #   - Content Moderation: examples/content-moderation.md
+  #   - Educational Assessment: examples/education.md
+  #   - A/B Testing: examples/ab-testing.md
+  # - Reference:
+  #   - Built-in Metrics: reference/metrics.md
+  #   - API Reference: reference/api.md
+  #   - Configuration: reference/config.md
+  #   - Exceptions: reference/exceptions.md
