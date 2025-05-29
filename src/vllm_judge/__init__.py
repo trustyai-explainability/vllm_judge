@@ -7,14 +7,16 @@ via vLLM's OpenAI-compatible API.
 
 __version__ = "0.1.0"
 
-from .judge import Judge
-from .models import (
+from vllm_judge.judge import Judge
+from vllm_judge.models import (
     JudgeConfig,
     EvaluationResult,
     Metric,
-    BatchResult
+    BatchResult,
+    TemplateEngine
 )
-from .metrics import (
+from vllm_judge.templating import TemplateProcessor
+from vllm_judge.metrics import (
     # General metrics
     HELPFULNESS,
     ACCURACY,
@@ -47,9 +49,19 @@ from .metrics import (
     LEGAL_APPROPRIATENESS,
     
     # Utility
-    BUILTIN_METRICS
+    BUILTIN_METRICS,
+
+    # Template metrics
+    EDUCATIONAL_CONTENT_TEMPLATE,
+    CODE_REVIEW_TEMPLATE,
+    CUSTOMER_SERVICE_TEMPLATE,
+    WRITING_QUALITY_TEMPLATE,
+    PRODUCT_REVIEW_TEMPLATE,
+    MEDICAL_INFO_TEMPLATE,
+    API_DOCS_TEMPLATE,
+
 )
-from .exceptions import (
+from vllm_judge.exceptions import (
     VLLMJudgeError,
     ConfigurationError,
     ConnectionError,
@@ -67,7 +79,9 @@ __all__ = [
     "EvaluationResult",
     "Metric",
     "BatchResult",
-    
+    "TemplateEngine",
+    "TemplateProcessor",
+
     # Metrics
     "HELPFULNESS",
     "ACCURACY", 
@@ -87,7 +101,13 @@ __all__ = [
     "MEDICAL_ACCURACY",
     "LEGAL_APPROPRIATENESS",
     "BUILTIN_METRICS",
-    
+    "EDUCATIONAL_CONTENT_TEMPLATE",
+    "CODE_REVIEW_TEMPLATE",
+    "CUSTOMER_SERVICE_TEMPLATE",
+    "WRITING_QUALITY_TEMPLATE",
+    "PRODUCT_REVIEW_TEMPLATE",
+    "MEDICAL_INFO_TEMPLATE",
+    "API_DOCS_TEMPLATE",
     # Exceptions
     "VLLMJudgeError",
     "ConfigurationError",

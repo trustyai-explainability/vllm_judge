@@ -1,5 +1,5 @@
 from typing import Dict
-from vllm_judge.models import Metric
+from vllm_judge.models import Metric,TemplateEngine
 
 # Registry for built-in metrics
 BUILTIN_METRICS: Dict[str, Metric] = {}
@@ -239,4 +239,179 @@ LEGAL_APPROPRIATENESS = create_builtin_metric(Metric(
         1: "Dangerous or incorrect legal advice"
     },
     system_prompt="You are evaluating legal information for accuracy and appropriateness. Note that this is for educational evaluation only, not legal advice."
+))
+
+## Example metrics showcasing template functionality.
+
+# Educational content metric with grade level customization
+EDUCATIONAL_CONTENT_TEMPLATE = create_builtin_metric(Metric(
+    name="educational_content_template",
+    criteria="""Evaluate this {content_type} for {grade_level} students studying {subject}:
+- Age-appropriate language for {grade_level}
+- Clear explanation of {topic}
+- Engagement level for {learning_style} learners
+- Accuracy of {subject} concepts""",
+    scale=(1, 10),
+    rubric={
+        10: "Perfect for {grade_level} {subject} education - engaging and accurate",
+        8: "Very good for {grade_level} with minor improvements needed",
+        6: "Adequate for {grade_level} but could be clearer",
+        4: "Somewhat inappropriate for {grade_level} level",
+        2: "Poor fit for {grade_level} students",
+        1: "Completely inappropriate for {grade_level}"
+    },
+    system_prompt="You are an experienced {subject} educator evaluating content for {grade_level} students.",
+    required_vars=["content_type", "grade_level", "subject", "topic", "learning_style"],
+    template_engine=TemplateEngine.FORMAT
+))
+
+
+# Code review metric with language and purpose customization
+CODE_REVIEW_TEMPLATE = create_builtin_metric(Metric(
+    name="code_review_template",
+    criteria="""Review this {language} code for {purpose}:
+- {language} best practices and idioms
+- Code {complexity_level} appropriate for {purpose}
+- {specific_aspects}""",
+    scale=(1, 10),
+    rubric="""
+10: Exceptional {language} code, perfect for {purpose}
+8: Very good, follows {language} conventions with minor issues
+6: Functional but needs refactoring for {purpose}
+4: Poor {language} practices, not suitable for {purpose}
+2: Very poor quality
+1: Broken or completely wrong
+""",
+    system_prompt="You are a senior {language} developer reviewing code for {purpose}.",
+    template_vars={
+        "complexity_level": "complexity",  # Default value
+        "specific_aspects": "Error handling and edge cases"  # Default value
+    },
+    required_vars=["language", "purpose"],  # Only these are required
+    template_engine=TemplateEngine.FORMAT
+))
+
+
+# Customer service evaluation with industry context
+CUSTOMER_SERVICE_TEMPLATE = create_builtin_metric(Metric(
+    name="customer_service_template",
+    criteria="""Evaluate this customer service response for {industry}:
+- Appropriateness for {customer_type} customers
+- Adherence to {company} policies
+- Resolution of {issue_type} issue
+- Tone suitable for {communication_channel}""",
+    rubric="""Classify as:
+- 'excellent': Perfectly handles {issue_type} for {customer_type}
+- 'good': Adequately addresses the issue with minor gaps
+- 'poor': Fails to properly handle {issue_type} or inappropriate for {customer_type}""",
+    system_prompt="You are evaluating {industry} customer service interactions for {company}.",
+    required_vars=["industry", "customer_type", "company", "issue_type", "communication_channel"],
+    template_engine=TemplateEngine.FORMAT
+))
+
+
+# Writing quality with genre-specific evaluation
+WRITING_QUALITY_TEMPLATE = create_builtin_metric(Metric(
+    name="writing_quality_template",
+    criteria="""Evaluate this {genre} writing for {audience}:
+- {genre} genre conventions
+- Appropriate {tone} tone for {audience}
+- {additional_criteria}""",
+    scale=(1, 5),
+    rubric={
+        5: "Exceptional {genre} writing for {audience}",
+        4: "Good {genre} writing with minor issues",
+        3: "Adequate but could better serve {audience}",
+        2: "Poor {genre} execution",
+        1: "Fails as {genre} writing"
+    },
+    template_vars={
+        "tone": "professional",  # Default
+        "additional_criteria": "Clarity and engagement"  # Default
+    },
+    required_vars=["genre", "audience"],
+    template_engine=TemplateEngine.FORMAT
+))
+
+
+# Product review evaluation with category specifics
+PRODUCT_REVIEW_TEMPLATE = create_builtin_metric(Metric(
+    name="product_review_template",
+    criteria="""Evaluate this review of a {product_category} product:
+- Relevance to {product_type} buyers
+- Coverage of key {product_category} features: {key_features}
+- Helpfulness for {buyer_persona}
+- Balanced perspective on {product_type}""",
+    scale=(1, 10),
+    rubric="""
+10: Extremely helpful {product_category} review for {buyer_persona}
+7: Good review covering most {product_type} aspects
+5: Basic review with some useful information
+3: Limited value for {product_type} buyers
+1: Unhelpful or misleading review
+""",
+    template_vars={
+        "buyer_persona": "general consumers"  # Default
+    },
+    required_vars=["product_category", "product_type", "key_features"],
+    template_engine=TemplateEngine.FORMAT
+))
+
+
+# Medical information evaluation (Jinja2 example)
+MEDICAL_INFO_TEMPLATE = create_builtin_metric(Metric(
+    name="medical_info_template",
+    criteria="""Evaluate medical information about {{ condition }}:
+{% if target_audience == 'healthcare_professionals' %}
+- Technical accuracy and use of medical terminology
+- Inclusion of differential diagnoses
+- Evidence-based recommendations with citations
+{% else %}
+- Clarity for {{ target_audience }}
+- Avoidance of unnecessary medical jargon
+- Clear action steps for patients
+{% endif %}
+- Safety considerations for {{ patient_group }}
+- Completeness of information about {{ condition }}""",
+    scale=(1, 5),
+    rubric="""
+5: Excellent medical information about {{ condition }} for {{ target_audience }}
+4: Good with minor omissions
+3: Adequate but needs clarification
+2: Potentially confusing or incomplete
+1: Dangerous or significantly incorrect
+""",
+    system_prompt="""You are a medical professional evaluating information about {{ condition }}.
+{% if severity == 'life-threatening' %}
+Pay special attention to emergency warning signs and urgent care instructions.
+{% endif %}
+Note: This is for educational evaluation only.""",
+    required_vars=["condition", "target_audience", "patient_group", "severity"],
+    template_engine=TemplateEngine.JINJA2
+))
+
+
+# API documentation evaluation
+API_DOCS_TEMPLATE = create_builtin_metric(Metric(
+    name="api_docs_template",
+    criteria="""Evaluate this API documentation for {api_type} API:
+- Completeness for {endpoint_type} endpoints
+- Code examples in {languages}
+- Authentication details for {auth_method}
+- Error handling documentation
+- {additional_sections}""",
+    scale=(1, 10),
+    rubric={
+        10: "Exceptional {api_type} API documentation",
+        8: "Comprehensive with minor gaps",
+        6: "Covers basics but missing advanced topics",
+        4: "Incomplete or confusing documentation",
+        2: "Severely lacking essential information",
+        1: "Unusable documentation"
+    },
+    template_vars={
+        "additional_sections": "Rate limiting and versioning information"
+    },
+    required_vars=["api_type", "endpoint_type", "languages", "auth_method"],
+    template_engine=TemplateEngine.FORMAT
 ))

@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocke
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from vllm_judge import Judge
+from vllm_judge.judge import Judge
 from vllm_judge.models import EvaluationResult, JudgeConfig
 from vllm_judge.metrics import BUILTIN_METRICS
 from vllm_judge.exceptions import VLLMJudgeError
@@ -28,6 +28,8 @@ from vllm_judge.api.models import (
     HealthResponse,
     ErrorResponse
 )
+from vllm_judge.templating import TemplateProcessor
+from vllm_judge.models import TemplateEngine
 from vllm_judge import __version__
 
 
@@ -105,7 +107,7 @@ async def evaluate(request: EvaluateRequest):
         # Convert scale list to tuple if provided
         scale = tuple(request.scale) if request.scale else None
         
-        # Perform evaluation
+        # Perform evaluation with template support
         result = await judge.evaluate(
             response=request.response,
             criteria=request.criteria,
@@ -114,7 +116,9 @@ async def evaluate(request: EvaluateRequest):
             metric=request.metric,
             context=request.context,
             system_prompt=request.system_prompt,
-            examples=request.examples
+            examples=request.examples,
+            template_vars=request.template_vars,
+            template_engine=request.template_engine
         )
         
         # Convert to response model
@@ -364,7 +368,11 @@ async def list_metrics():
             rubric_type=type(metric.rubric).__name__ if metric.rubric else None,
             has_examples=bool(metric.examples),
             example_count=len(metric.examples) if metric.examples else 0,
-            has_system_prompt=metric.system_prompt is not None
+            has_system_prompt=metric.system_prompt is not None,
+            has_template_vars=bool(metric.template_vars),
+            template_vars=metric.template_vars if metric.template_vars else None,
+            required_vars=metric.required_vars if hasattr(metric, 'required_vars') else None,
+            template_engine=metric.template_engine.value if hasattr(metric, 'template_engine') else None
         )
         metrics_info.append(info)
     
@@ -388,7 +396,10 @@ async def get_metric_details(metric_name: str):
         "scale": metric.scale,
         "rubric": metric.rubric,
         "examples": metric.examples,
-        "system_prompt": metric.system_prompt
+        "system_prompt": metric.system_prompt,
+        "template_vars": getattr(metric, 'template_vars', None),
+        "required_vars": getattr(metric, 'required_vars', None),
+        "template_engine": getattr(metric, 'template_engine', None)
     }
 
 
@@ -418,7 +429,9 @@ async def websocket_evaluate(websocket: WebSocket):
                     metric=request.metric,
                     context=request.context,
                     system_prompt=request.system_prompt,
-                    examples=request.examples
+                    examples=request.examples,
+                    template_vars=request.template_vars,
+                    template_engine=request.template_engine
                 )
                 
                 # Send result
@@ -440,6 +453,84 @@ async def websocket_evaluate(websocket: WebSocket):
                 
     except WebSocketDisconnect:
         active_connections -= 1
+
+
+@app.post("/validate/template")
+async def validate_template(request: Dict[str, Any]):
+    """Validate template variables for a given template."""
+    template = request.get("template", "")
+    template_vars = request.get("template_vars", {})
+    engine = request.get("template_engine", "format")
+    
+    try:
+        # Get required variables
+        required_vars = TemplateProcessor.get_required_vars(
+            template, 
+            TemplateEngine(engine)
+        )
+        
+        # Check which are missing
+        provided_vars = set(template_vars.keys())
+        missing_vars = required_vars - provided_vars
+        
+        # Try to apply template
+        try:
+            result = TemplateProcessor.apply_template(
+                template,
+                template_vars,
+                TemplateEngine(engine),
+                strict=True
+            )
+            
+            return {
+                "valid": True,
+                "required_vars": list(required_vars),
+                "provided_vars": list(provided_vars),
+                "missing_vars": list(missing_vars),
+                "result": result
+            }
+        except Exception as e:
+            return {
+                "valid": False,
+                "required_vars": list(required_vars),
+                "provided_vars": list(provided_vars),
+                "missing_vars": list(missing_vars),
+                "error": str(e)
+            }
+            
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
+
+
+@app.post("/metrics/register")
+async def register_metric(metric_data: Dict[str, Any]):
+    """Register a new metric dynamically."""
+    if not judge:
+        raise HTTPException(status_code=503, detail="Judge not initialized")
+    
+    try:
+        # Create metric from data
+        from vllm_judge.models import Metric
+        
+        metric = Metric(
+            name=metric_data["name"],
+            criteria=metric_data["criteria"],
+            rubric=metric_data.get("rubric"),
+            scale=tuple(metric_data["scale"]) if metric_data.get("scale") else None,
+            examples=metric_data.get("examples", []),
+            system_prompt=metric_data.get("system_prompt"),
+            template_vars=metric_data.get("template_vars", {}),
+            required_vars=metric_data.get("required_vars", []),
+            template_engine=metric_data.get("template_engine", "format")
+        )
+        
+        # Register with judge
+        judge.register_metric(metric)
+        
+        return {"message": f"Metric '{metric.name}' registered successfully"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to register metric: {str(e)}")
 
 
 def create_app(config: JudgeConfig) -> FastAPI:

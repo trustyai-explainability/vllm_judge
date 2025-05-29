@@ -29,12 +29,19 @@ class EvaluateRequest(BaseModel):
     examples: Optional[List[Dict[str, Any]]] = Field(
         None, description="Few-shot examples"
     )
+    template_vars: Optional[Dict[str, Any]] = Field(
+        None, description="Template variables to substitute"
+    )
+    template_engine: Optional[str] = Field(
+        None, description="Template engine to use ('format' or 'jinja2'), default is 'format'"
+    )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "response": "Python is a high-level programming language...",
-                "criteria": "technical accuracy",
+                "criteria": "technical accuracy for {audience}",
+                "template_vars": {"audience": "beginners"},
                 "scale": [1, 10]
             }
         }
@@ -124,6 +131,10 @@ class MetricInfo(BaseModel):
     has_examples: bool
     example_count: int = 0
     has_system_prompt: bool
+    has_template_vars: bool = False
+    template_vars: Optional[Dict[str, Any]] = None
+    required_vars: Optional[List[str]] = None
+    template_engine: Optional[str] = None
 
 
 class HealthResponse(BaseModel):

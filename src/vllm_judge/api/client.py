@@ -7,13 +7,12 @@ import httpx
 import websockets
 import json
 
-from vllm_judge.models import EvaluationResult, BatchResult, Metric
-from vllm_judge.exceptions import VLLMJudgeError, ConnectionError, TimeoutError
+from vllm_judge.models import EvaluationResult, BatchResult
+from vllm_judge.exceptions import VLLMJudgeError, ConnectionError
 from vllm_judge.api.models import (
     EvaluateRequest,
     BatchEvaluateRequest,
     AsyncBatchRequest,
-    JobStatusResponse,
     MetricInfo
 )
 
@@ -74,13 +73,15 @@ class JudgeClient:
         context: str = None,
         system_prompt: str = None,
         examples: List[Dict[str, Any]] = None,
+        template_vars: Dict[str, Any] = None,
+        template_engine: str = None,
         **kwargs
     ) -> EvaluationResult:
         """
         Perform single evaluation via API.
         
         Args:
-            Same as Judge.evaluate()
+            Same as Judge.evaluate() including template support
             
         Returns:
             EvaluationResult
@@ -93,7 +94,9 @@ class JudgeClient:
             metric=metric,
             context=context,
             system_prompt=system_prompt,
-            examples=examples
+            examples=examples,
+            template_vars=template_vars,
+            template_engine=template_engine
         )
         
         try:

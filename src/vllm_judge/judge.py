@@ -2,11 +2,12 @@ import json
 import re
 from typing import Union, Dict, List, Optional, Tuple, Any, Callable
 
-from vllm_judge.models import JudgeConfig, EvaluationResult, Metric, BatchResult
+from vllm_judge.models import JudgeConfig, EvaluationResult, Metric, BatchResult, TemplateEngine
 from vllm_judge.client import VLLMClient
 from vllm_judge.prompts import PromptBuilder
 from vllm_judge.batch import BatchProcessor
 from vllm_judge.metrics import BUILTIN_METRICS
+from vllm_judge.templating import TemplateProcessor
 from vllm_judge.exceptions import (
     ParseError,
     InvalidInputError,
@@ -67,6 +68,8 @@ class Judge:
         metric: Union[Metric, str] = None,
         system_prompt: str = None,
         context: str = None,
+        template_vars: Dict[str, Any] = None,
+        template_engine: Union[str, TemplateEngine] = TemplateEngine.FORMAT,
         **kwargs
     ) -> EvaluationResult:
         """
@@ -74,24 +77,28 @@ class Judge:
         
         Args:
             response: String for single evaluation, dict {"a": ..., "b": ...} for comparison
-            criteria: What to evaluate for
-            rubric: Instructions for evaluation (string or dict mapping scores to descriptions)
+            criteria: What to evaluate for (can contain template variables)
+            rubric: Instructions for evaluation, can be string or dict containing mapping of score to description (can contain template variables)
             scale: Optional numeric scale (min, max)
             examples: Optional few-shot examples
             metric: Pre-defined Metric object or registered metric name
-            system_prompt: Optional custom system message
+            system_prompt: Optional custom system message (can contain template variables)
             context: Optional context for the evaluation
+            template_vars: Variables to substitute in templates
+            template_engine: Template engine to use ('format' or 'jinja2'), default is 'format'
             **kwargs: Additional parameters
             
         Returns:
             EvaluationResult with decision, reasoning, and optional score
             
         Raises:
-            InvalidInputError: If inputs are invalid
+            InvalidInputError: If inputs are invalid or template vars missing
             MetricNotFoundError: If metric name not found
             ParseError: If unable to parse model response
         """
         # Handle metric parameter
+        metric_template_vars = {}
+        
         if metric:
             if isinstance(metric, str):
                 metric = self.get_metric(metric)
@@ -101,10 +108,33 @@ class Judge:
             scale = scale or metric.scale
             examples = examples or metric.examples
             system_prompt = system_prompt or metric.system_prompt
+            metric_template_vars = metric.template_vars
+            if metric.template_engine:
+                template_engine = metric.template_engine
         
         # Validate inputs
         if not criteria:
             raise InvalidInputError("Either 'criteria' or 'metric' must be provided")
+        
+        # Determine template engine
+        engine = TemplateEngine(template_engine)
+        
+        # Merge template variables (metric defaults + user provided)
+        all_template_vars = {**metric_template_vars, **(template_vars or {})}
+        
+        # Process templates
+        criteria = TemplateProcessor.apply_template(
+            criteria, all_template_vars, engine, strict=True
+        )
+        rubric = TemplateProcessor.apply_template(
+            rubric, all_template_vars, engine, strict=True
+        )
+        system_prompt = TemplateProcessor.apply_template(
+            system_prompt, all_template_vars, engine, strict=True
+        )
+        context = TemplateProcessor.apply_template(
+            context, all_template_vars, engine, strict=True
+        )
         
         # Build messages
         messages = PromptBuilder.build_messages(
@@ -129,7 +159,14 @@ class Judge:
             raise VLLMJudgeError(f"Failed to get model response: {e}")
         
         # Parse response
-        return self._parse_response(llm_response)
+        result = self._parse_response(llm_response)
+        
+        # Add template info to metadata if used
+        if all_template_vars:
+            result.metadata["template_vars"] = all_template_vars
+            result.metadata["template_engine"] = engine.value
+        
+        return result
     
     def _parse_response(self, response: str) -> EvaluationResult:
         """

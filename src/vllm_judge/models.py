@@ -1,5 +1,12 @@
 from typing import Optional, Any, Dict, Union, List, Tuple
 from pydantic import BaseModel, Field, field_validator, ConfigDict
+from enum import Enum
+
+
+class TemplateEngine(str, Enum):
+    """Supported template engines."""
+    FORMAT = "format"
+    JINJA2 = "jinja2"
 
 
 class EvaluationResult(BaseModel):
@@ -18,7 +25,7 @@ class EvaluationResult(BaseModel):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "examples": [
                 {
                     "decision": "PROFESSIONAL",
@@ -89,18 +96,24 @@ class Metric:
         rubric: Union[str, Dict[Union[int, float], str]] = None,
         scale: Optional[Tuple[int, int]] = None,
         examples: Optional[List[Dict[str, Any]]] = None,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        template_vars: Optional[Dict[str, Any]] = None,
+        required_vars: Optional[List[str]] = None,
+        template_engine: Union[str, TemplateEngine] = TemplateEngine.FORMAT
     ):
         """
         Initialize a reusable metric.
         
         Args:
             name: Metric identifier
-            criteria: What to evaluate for
-            rubric: Evaluation guide (string or score->description mapping)
+            criteria: What to evaluate for (can contain template variables)
+            rubric: Evaluation guide (can contain template variables)
             scale: Optional numeric scale (min, max)
             examples: Optional few-shot examples
-            system_prompt: Optional custom system message
+            system_prompt: Optional custom system message (can contain template variables)
+            template_vars: Default template variable values
+            required_vars: List of required template variables, these are variables that are required to be provided by the user for every evaluation
+            template_engine: Template engine to use ('format' or 'jinja2'), default is 'format'
         """
         self.name = name
         self.criteria = criteria
@@ -109,9 +122,42 @@ class Metric:
         # TODO: Create a dedicated class for examples for better handling
         self.examples = examples or []
         self.system_prompt = system_prompt
+        self.template_vars = template_vars or {}
+        self.required_vars = required_vars or []
+        self.template_engine = TemplateEngine(template_engine)
+        
+        # Auto-detect required variables if not specified
+        if not self.required_vars and self.template_engine == TemplateEngine.FORMAT:
+            self._auto_detect_required_vars()
+    
+    def _auto_detect_required_vars(self):
+        """Auto-detect required variables from format strings."""
+        import string
+        
+        texts_to_check = [self.criteria]
+        if isinstance(self.rubric, str):
+            texts_to_check.append(self.rubric)
+        elif isinstance(self.rubric, dict):
+            texts_to_check.extend(str(v) for v in self.rubric.values())
+        if self.system_prompt:
+            texts_to_check.append(self.system_prompt)
+        
+        all_vars = set()
+        for text in texts_to_check:
+            try:
+                # Parse format string to find variable names
+                formatter = string.Formatter()
+                for _, field_name, _, _ in formatter.parse(text):
+                    if field_name:
+                        all_vars.add(field_name)
+            except:
+                pass  # If parsing fails, skip auto-detection
+        
+        # Required vars are those not in default template_vars
+        self.required_vars = list(all_vars - set(self.template_vars.keys()))
     
     def __repr__(self):
-        return f"Metric(name='{self.name}', criteria='{self.criteria}', rubric='{self.rubric}', scale='{self.scale}', examples='{self.examples}', system_prompt='{self.system_prompt}')"
+        return f"Metric(name='{self.name}', criteria='{self.criteria}', template_engine='{self.template_engine}')"
 
 
 class BatchResult(BaseModel):
