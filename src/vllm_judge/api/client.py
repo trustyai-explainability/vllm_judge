@@ -74,7 +74,7 @@ class JudgeClient:
         system_prompt: str = None,
         examples: List[Dict[str, Any]] = None,
         template_vars: Dict[str, Any] = None,
-        template_engine: str = None,
+        template_engine: str = "format",
         **kwargs
     ) -> EvaluationResult:
         """

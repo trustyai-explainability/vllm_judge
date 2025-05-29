@@ -69,7 +69,7 @@ async def vllm_judge_exception_handler(request, exc: VLLMJudgeError):
             error=exc.__class__.__name__,
             detail=str(exc),
             code="VLLM_JUDGE_ERROR"
-        ).dict()
+        ).model_dump()
     )
 
 
