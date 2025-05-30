@@ -82,3 +82,8 @@ result = await client.evaluate(
 )
 ```
 
+## Next Steps
+
+- Refer [Getting Started](getting-started/) for detailed installation and quickstart docs.
+
+- Explore [Guide](guide/) for basic to advanced evaluation scenarios.
