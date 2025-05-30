@@ -67,7 +67,7 @@ result = await judge.evaluate(
 Run Judge as a REST API:
 
 ```bash
-vllm-judge serve --base-url http://vllm-server:8000 --port 9090 --host localhost
+vllm-judge serve --base-url http://vllm-server:8000 --port 9090
 ```
 
 Then use the HTTP API:
