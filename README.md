@@ -1,6 +1,6 @@
 # vLLM Judge
 
-A lightweight library for LLM-as-a-Judge evaluations using vLLM hosted models.
+A lightweight library for LLM-as-a-Judge evaluations using vLLM hosted models. Please refer the [documentation](https://saichandrapandraju.github.io/vllm_judge/) for usage details.
 
 ## Features
 
