@@ -38,9 +38,13 @@ pip install vllm-judge
 ```
 
 This installs the essential dependencies:
+
 - `httpx` - Async HTTP client
+
 - `pydantic` - Data validation
+
 - `tenacity` - Retry logic
+
 - `click` - CLI interface
 
 ### Optional Features
@@ -54,8 +58,11 @@ pip install vllm-judge[api]
 ```
 
 This adds:
+
 - `fastapi` - Web framework
+
 - `uvicorn` - ASGI server
+
 - `websockets` - WebSocket support
 
 #### Jinja2 Templates
@@ -149,3 +156,9 @@ conda activate vllm-judge
 # Install vLLM Judge
 pip install vllm-judge
 ```
+
+## 🎉 Next Steps
+
+Congratulations! You've successfully installed vLLM Judge and ready for some evals. Here's what to explore next:
+
+- **[Quick Start](quickstart.md)** - Get up and running with vLLM Judge in 5 minutes!

@@ -246,4 +246,4 @@ Congratulations! You've learned the basics of vLLM Judge. Here's what to explore
 1. **[Basic Evaluation Guide](../guide/basic-evaluation.md)** - Deep dive into evaluation options
 2. **[Using Metrics](../guide/metrics.md)** - Explore all pre-built metrics
 3. **[Template Variables](../guide/templates.md)** - Advanced templating features
-4. **[API Server](../api/server.md)** - Deploy Judge as a service
+<!-- 4. **[API Server](../api/server.md)** - Deploy Judge as a service -->

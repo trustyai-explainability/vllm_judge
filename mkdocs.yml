@@ -67,10 +67,10 @@ nav:
     - Installation: getting-started/installation.md
     - Quick Start: getting-started/quickstart.md
   #   - Core Concepts: getting-started/concepts.md
-  # - User Guide:
-  #   - Basic Evaluation: guide/basic-evaluation.md
-  #   - Using Metrics: guide/metrics.md
-  #   - Template Variables: guide/templates.md
+  - User Guide:
+    - Basic Evaluation: guide/basic-evaluation.md
+    - Using Metrics: guide/metrics.md
+    - Template Variables: guide/templates.md
   #   - Batch Processing: guide/batch.md
   #   - Advanced Usage: guide/advanced.md
   # - API Server:
