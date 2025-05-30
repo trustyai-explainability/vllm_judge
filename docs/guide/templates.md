@@ -5,9 +5,13 @@ Template variables make your evaluations dynamic and reusable. This guide shows 
 ## Why Use Templates?
 
 Templates allow you to:
+
 - **Reuse** evaluation logic with different contexts
+
 - **Parameterize** criteria for different scenarios
+
 - **Scale** evaluations across varied use cases
+
 - **Maintain** consistency while allowing flexibility
 
 ## Basic Template Usage
@@ -640,11 +644,14 @@ Template variables provide powerful flexibility for:
 - **Complex logic** with Jinja2 templates
 
 Key takeaways:
+
 1. Start with simple `{variable}` substitution
+
 2. Use template metrics for reusability
+
 3. Leverage Jinja2 for complex logic
-4. Always validate required variables
-5. Document your templates clearly
+
+4. Validate required variables
 
 <!-- ## Next Steps
 

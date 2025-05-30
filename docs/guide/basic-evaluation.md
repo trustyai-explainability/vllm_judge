@@ -35,8 +35,11 @@ result = await judge.evaluate(
 ```
 
 **What happens behind the scenes:**
+
 - Judge creates a prompt asking to evaluate the response based on your criteria
+
 - The LLM provides a score (typically 1-10) and reasoning
+
 - You get a structured result with `decision`, `reasoning`, and `score`
 
 ## Level 2: Adding Structure with Scales and Rubrics

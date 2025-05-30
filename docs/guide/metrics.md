@@ -5,10 +5,15 @@ vLLM Judge provides 20+ pre-built metrics for common evaluation tasks. This guid
 ## What are Metrics?
 
 Metrics are pre-configured evaluation templates that encapsulate:
+
 - **Criteria**: What to evaluate
+
 - **Scale**: Numeric range (if applicable)
+
 - **Rubric**: Judgement/Scoring guidelines
+
 - **System Prompt**: Evaluator expertise
+
 - **Examples**: Few-shot guidance 
 
 ## Using Pre-built Metrics
