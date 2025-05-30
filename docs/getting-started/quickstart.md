@@ -28,14 +28,6 @@ print(f"Score: {result.score}")
 print(f"Reasoning: {result.reasoning}")
 ```
 
-**Sample Output:**
-```
-Decision: 9
-Score: 9.0
-Reasoning: The statement is technically accurate. Python is indeed known for its 
-versatility and simple, readable syntax, making it popular for various applications.
-```
-
 ## 📊 Using Pre-built Metrics
 
 vLLM Judge comes with 20+ pre-built metrics:

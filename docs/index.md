@@ -33,7 +33,7 @@ pip install vllm-judge[dev]
 from vllm_judge import Judge
 
 # Initialize with vLLM url
-judge = Judge.from_url("http://localhost:8000")
+judge = Judge.from_url("http://vllm-server:8000")
 
 # Simple evaluation
 result = await judge.evaluate(
@@ -67,7 +67,7 @@ result = await judge.evaluate(
 Run Judge as a REST API:
 
 ```bash
-vllm-judge serve --base-url http://localhost:8000 --port 9090 --host localhost
+vllm-judge serve --base-url http://vllm-server:8000 --port 9090
 ```
 
 Then use the HTTP API:
@@ -77,7 +77,7 @@ from vllm_judge.api import JudgeClient
 
 client = JudgeClient("http://localhost:9090")
 result = await client.evaluate(
-    response="Python is great!",
+    response="Python is a versatile programming language known for its simple syntax.",
     criteria="technical accuracy"
 )
 ```
