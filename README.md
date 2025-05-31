@@ -1,7 +1,5 @@
 [![PyPI version](https://img.shields.io/pypi/v/vllm-judge.svg)
 ](https://pypi.org/project/vllm-judge/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/vllm-judge.svg)
-](https://pepy.tech/project/vllm-judge)
 
 # vLLM Judge
 
