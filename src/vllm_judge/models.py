@@ -1,4 +1,4 @@
-from typing import Optional, Any, Dict, Union, List, Tuple
+from typing import Optional, Any, Dict, Union, List, Tuple, Callable
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from enum import Enum
 
@@ -159,6 +159,15 @@ class Metric:
     def __repr__(self):
         return f"Metric(name='{self.name}', criteria='{self.criteria}', template_engine='{self.template_engine}')"
 
+# Base class for model-specific metrics
+class ModelSpecificMetric(Metric):
+    """Metric that bypasses our prompt formatting."""
+    
+    def __init__(self, name: str, model_pattern: str, parser_func: Callable[[str], EvaluationResult]):
+        super().__init__(name=name, criteria="model-specific evaluation")
+        self.model_pattern = model_pattern
+        self.parser_func = parser_func
+        # self.is_model_specific = True  # Flag for special handling
 
 class BatchResult(BaseModel):
     """Result of batch evaluation."""

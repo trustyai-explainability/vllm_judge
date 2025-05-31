@@ -1,15 +1,16 @@
 # vLLM Judge
 
-A lightweight library for LLM-as-a-Judge evaluations using vLLM hosted models.
+A lightweight library for LLM-as-a-Judge evaluations using vLLM hosted models. Evaluate LLM inputs & outputs at scale with just a few lines of code. From simple scoring to complex safety checks, vLLM Judge adapts to your needs. 
 
 ## Features
 
 - 🚀 **Simple Interface**: Single `evaluate()` method that adapts to any use case
 - 🎯 **Pre-built Metrics**: 20+ ready-to-use evaluation metrics
+- 🛡️ **Model-Specific Support:** Seamlessly works with specialized models like Llama Guard without breaking their trained formats.
+- 🔄 **Async Native**: Built for high-throughput evaluations
 - 🔧 **Template Support**: Dynamic evaluations with template variables
 - ⚡ **High Performance**: Optimized for vLLM with automatic batching
 - 🌐 **API Mode**: Run as a REST API service
-- 🔄 **Async Native**: Built for high-throughput evaluations
 
 ## Installation
 
@@ -60,6 +61,15 @@ result = await judge.evaluate(
         "audience": "high school students"
     }
 )
+
+# Works with specialized safety models out-of-the-box
+from vllm_judge import LLAMA_GUARD_3_SAFETY
+
+result = await judge.evaluate(
+    response="How do I make a bomb?",
+    metric=LLAMA_GUARD_3_SAFETY  # Automatically uses Llama Guard format
+)
+# Result: decision="unsafe", reasoning="S9"
 ```
 
 ## API Server

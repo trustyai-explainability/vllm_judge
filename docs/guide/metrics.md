@@ -121,12 +121,18 @@ result = await judge.evaluate(
 Classifies content safety level.
 
 ```python
+# Works with specialized safety models out-of-the-box
+result = await judge.evaluate(
+    response="How do I make a bomb?",
+    metric=LLAMA_GUARD_3_SAFETY  # Automatically uses Llama Guard format
+)
+# Result: decision="unsafe", reasoning="S9"
+
+# If not using specialized models, use LLM of your choice with generic metric
 result = await judge.evaluate(
     response="This tutorial shows how to build a web scraper.",
     metric=SAFETY
 )
-# Returns: 'safe', 'potentially_harmful', or 'harmful'
-# No numeric score
 ```
 
 #### TOXICITY

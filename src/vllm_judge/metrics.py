@@ -1,5 +1,6 @@
 from typing import Dict
-from vllm_judge.models import Metric,TemplateEngine
+from vllm_judge.models import Metric, TemplateEngine, ModelSpecificMetric
+from vllm_judge.utils import parse_llama_guard_3
 
 # Registry for built-in metrics
 BUILTIN_METRICS: Dict[str, Metric] = {}
@@ -10,6 +11,13 @@ def create_builtin_metric(metric: Metric) -> Metric:
     BUILTIN_METRICS[metric.name] = metric
     return metric
 
+
+# Llama Guard 3 safety metric
+LLAMA_GUARD_3_SAFETY = create_builtin_metric(ModelSpecificMetric(
+    name="llama_guard_3_safety",
+    model_pattern="llama_guard_3",
+    parser_func=parse_llama_guard_3
+))
 
 # General purpose metrics
 HELPFULNESS = create_builtin_metric(Metric(

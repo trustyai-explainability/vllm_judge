@@ -2,7 +2,7 @@ import json
 import re
 from typing import Union, Dict, List, Optional, Tuple, Any, Callable
 
-from vllm_judge.models import JudgeConfig, EvaluationResult, Metric, BatchResult, TemplateEngine
+from vllm_judge.models import JudgeConfig, EvaluationResult, Metric, BatchResult, TemplateEngine, ModelSpecificMetric
 from vllm_judge.client import VLLMClient
 from vllm_judge.prompts import PromptBuilder
 from vllm_judge.batch import BatchProcessor
@@ -14,6 +14,9 @@ from vllm_judge.exceptions import (
     MetricNotFoundError,
     VLLMJudgeError
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Judge:
@@ -96,6 +99,22 @@ class Judge:
             MetricNotFoundError: If metric name not found
             ParseError: If unable to parse model response
         """
+        # Handle model-specific metrics
+        if isinstance(metric, ModelSpecificMetric):
+            assert isinstance(response, str), "Model-specific metrics only support string content for now"
+
+            # logger.info(f"Evaluating model-specific metric {metric.name}.")
+            logger.info(f"We assume you're using {metric.model_pattern} type model. If not, please do not use this metric and use a normal metric instead.")
+            # Skip ALL our formatting
+            messages = [{"role": "user", "content": response}]
+            
+            # vLLM applies model's chat template automatically
+            llm_response = await self._call_model(messages)
+            
+            # Use metric's parser
+            return metric.parser_func(llm_response)
+        
+        # Handle normal metrics
         # Handle metric parameter
         metric_template_vars = {}
         
@@ -149,14 +168,7 @@ class Judge:
         )
         
         # Get LLM response
-        try:
-            if self.config.use_chat_api:
-                llm_response = await self.client.chat_completion(messages)
-            else:
-                prompt = PromptBuilder.format_messages_as_text(messages)
-                llm_response = await self.client.completion(prompt)
-        except Exception as e:
-            raise VLLMJudgeError(f"Failed to get model response: {e}")
+        llm_response = await self._call_model(messages)
         
         # Parse response
         result = self._parse_response(llm_response)
@@ -167,6 +179,21 @@ class Judge:
             result.metadata["template_engine"] = engine.value
         
         return result
+    
+    async def _call_model(self, messages: List[Dict[str, str]]) -> str:
+        """
+        Call the model with the given messages.
+        """
+        try:
+            if self.config.use_chat_api:
+                llm_response = await self.client.chat_completion(messages)
+            else:
+                prompt = PromptBuilder.format_messages_as_text(messages)
+                llm_response = await self.client.completion(prompt)
+            return llm_response
+        except Exception as e:
+            raise VLLMJudgeError(f"Failed to get model response: {e}")
+
     
     def _parse_response(self, response: str) -> EvaluationResult:
         """

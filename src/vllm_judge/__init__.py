@@ -13,7 +13,8 @@ from vllm_judge.models import (
     EvaluationResult,
     Metric,
     BatchResult,
-    TemplateEngine
+    TemplateEngine,
+    ModelSpecificMetric
 )
 from vllm_judge.templating import TemplateProcessor
 from vllm_judge.metrics import (
@@ -27,6 +28,7 @@ from vllm_judge.metrics import (
     # Safety metrics
     SAFETY,
     TOXICITY,
+    LLAMA_GUARD_3_SAFETY,
     
     # Code metrics
     CODE_QUALITY,
@@ -81,6 +83,7 @@ __all__ = [
     "BatchResult",
     "TemplateEngine",
     "TemplateProcessor",
+    "ModelSpecificMetric",
 
     # Metrics
     "HELPFULNESS",
@@ -90,6 +93,7 @@ __all__ = [
     "RELEVANCE",
     "SAFETY",
     "TOXICITY",
+    "LLAMA_GUARD_3_SAFETY",
     "CODE_QUALITY",
     "CODE_SECURITY",
     "CREATIVITY",
