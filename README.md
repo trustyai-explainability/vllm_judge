@@ -10,9 +10,8 @@ A lightweight library for LLM-as-a-Judge evaluations using vLLM hosted models. E
 - 🚀 **Simple Interface**: Single `evaluate()` method that adapts to any use case
 - 🎯 **Pre-built Metrics**: 20+ ready-to-use evaluation metrics
 - 🛡️ **Model-Specific Support:** Seamlessly works with specialized models like Llama Guard without breaking their trained formats.
-- 🔄 **Async Native**: Built for high-throughput evaluations
+- ⚡ **High Performance**: Async-first design enables high-throughput evaluations
 - 🔧 **Template Support**: Dynamic evaluations with template variables
-- ⚡ **High Performance**: Optimized for vLLM with automatic batching
 - 🌐 **API Mode**: Run as a REST API service
 
 ## Installation
