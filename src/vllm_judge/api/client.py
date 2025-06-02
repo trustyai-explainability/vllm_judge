@@ -65,7 +65,7 @@ class JudgeClient:
     
     async def evaluate(
         self,
-        response: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str]],
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
         scale: Optional[Tuple[int, int]] = None,
@@ -87,7 +87,7 @@ class JudgeClient:
             EvaluationResult
         """
         request = EvaluateRequest(
-            response=response,
+            response=content,
             criteria=criteria,
             rubric=rubric,
             scale=list(scale) if scale else None,

@@ -25,14 +25,14 @@ from vllm_judge import Judge, HELPFULNESS, CODE_QUALITY, SAFETY
 
 # Use a metric directly
 result = await judge.evaluate(
-    response="To reset your password, click on 'Forgot Password' on the login page.",
+    content="To reset your password, click on 'Forgot Password' on the login page.",
     metric=HELPFULNESS
 )
 
 # Metrics can be referenced by name (string) after import
 from vllm_judge import BUILTIN_METRICS  # Import to register all metrics
 result = await judge.evaluate(
-    response="def hello(): print('Hi')",
+    content="def hello(): print('Hi')",
     metric="code_quality"  # String reference
 )
 ```
@@ -62,7 +62,7 @@ Evaluates how well a response addresses user needs.
 
 ```python
 result = await judge.evaluate(
-    response="Try restarting your computer to fix the issue.",
+    content="Try restarting your computer to fix the issue.",
     metric=HELPFULNESS
 )
 # Scale: 1-10
@@ -75,7 +75,7 @@ Evaluates factual correctness.
 
 ```python
 result = await judge.evaluate(
-    response="Python was created by Guido van Rossum in 1991.",
+    content="Python was created by Guido van Rossum in 1991.",
     metric=ACCURACY
 )
 # Scale: 1-10
@@ -88,7 +88,7 @@ Evaluates how clear and understandable the response is.
 
 ```python
 result = await judge.evaluate(
-    response="The API endpoint accepts POST requests with JSON payload containing user credentials.",
+    content="The API endpoint accepts POST requests with JSON payload containing user credentials.",
     metric=CLARITY
 )
 ```
@@ -98,7 +98,7 @@ Evaluates brevity without losing essential information.
 
 ```python
 result = await judge.evaluate(
-    response="To summarize, the main point is that...",
+    content="To summarize, the main point is that...",
     metric=CONCISENESS
 )
 ```
@@ -108,7 +108,7 @@ Evaluates how relevant the response is to the query.
 
 ```python
 result = await judge.evaluate(
-    response="Here's information about Python programming...",
+    content="Here's information about Python programming...",
     metric=RELEVANCE,
     context="User asked about JavaScript frameworks"
 )
@@ -123,14 +123,14 @@ Classifies content safety level.
 ```python
 # Works with specialized safety models out-of-the-box
 result = await judge.evaluate(
-    response="How do I make a bomb?",
+    content="How do I make a bomb?",
     metric=LLAMA_GUARD_3_SAFETY  # Automatically uses Llama Guard format
 )
 # Result: decision="unsafe", reasoning="S9"
 
 # If not using specialized models, use LLM of your choice with generic metric
 result = await judge.evaluate(
-    response="This tutorial shows how to build a web scraper.",
+    content="This tutorial shows how to build a web scraper.",
     metric=SAFETY
 )
 ```
@@ -140,7 +140,7 @@ Measures level of toxic or offensive content.
 
 ```python
 result = await judge.evaluate(
-    response="I disagree with your opinion on this matter.",
+    content="I disagree with your opinion on this matter.",
     metric=TOXICITY
 )
 # Scale: 0-10 (0 = no toxicity, 10 = extremely toxic)
@@ -153,7 +153,7 @@ Comprehensive code evaluation.
 
 ```python
 result = await judge.evaluate(
-    response="""
+    content="""
     def calculate_average(numbers):
         if not numbers:
             return 0
@@ -170,7 +170,7 @@ Evaluates code for security vulnerabilities.
 
 ```python
 result = await judge.evaluate(
-    response="""
+    content="""
     user_input = input("Enter SQL: ")
     cursor.execute(f"SELECT * FROM users WHERE id = {user_input}")
     """,
@@ -186,7 +186,7 @@ Measures originality and creative expression.
 
 ```python
 result = await judge.evaluate(
-    response="The sky wept diamonds as the sun retired for the day.",
+    content="The sky wept diamonds as the sun retired for the day.",
     metric=CREATIVITY
 )
 ```
@@ -196,7 +196,7 @@ Evaluates professional tone and presentation.
 
 ```python
 result = await judge.evaluate(
-    response="Hey! Thanks for reaching out. We'll get back to ya soon!",
+    content="Hey! Thanks for reaching out. We'll get back to ya soon!",
     metric=PROFESSIONALISM,
     context="Customer service email"
 )
@@ -208,7 +208,7 @@ Evaluates how well content teaches or explains.
 
 ```python
 result = await judge.evaluate(
-    response=tutorial_content,
+    content=tutorial_content,
     metric=EDUCATIONAL_VALUE
 )
 ```
@@ -220,7 +220,7 @@ For comparing two options without specific criteria.
 
 ```python
 result = await judge.evaluate(
-    response={"a": response1, "b": response2},
+    content={"a": response1, "b": response2},
     metric=PREFERENCE
 )
 # Returns which response is preferred overall
@@ -231,7 +231,7 @@ Binary classification of appropriateness.
 
 ```python
 result = await judge.evaluate(
-    response="This joke might offend some people.",
+    content="This joke might offend some people.",
     metric=APPROPRIATE,
     context="Company newsletter"
 )
@@ -242,7 +242,7 @@ Verifies factual claims.
 
 ```python
 result = await judge.evaluate(
-    response="The speed of light is approximately 300,000 km/s.",
+    content="The speed of light is approximately 300,000 km/s.",
     metric=FACTUAL
 )
 ```
@@ -254,7 +254,7 @@ Evaluates medical information (with safety focus).
 
 ```python
 result = await judge.evaluate(
-    response="For headaches, drink plenty of water and rest.",
+    content="For headaches, drink plenty of water and rest.",
     metric=MEDICAL_ACCURACY
 )
 # Scale: 1-5
@@ -267,7 +267,7 @@ Evaluates legal information appropriateness.
 
 ```python
 result = await judge.evaluate(
-    response="You should consult a lawyer for specific advice.",
+    content="You should consult a lawyer for specific advice.",
     metric=LEGAL_APPROPRIATENESS
 )
 ```
@@ -281,21 +281,21 @@ You can override any metric parameter:
 ```python
 # Use HELPFULNESS with a different scale
 result = await judge.evaluate(
-    response="Here's the solution to your problem...",
+    content="Here's the solution to your problem...",
     metric=HELPFULNESS,
     scale=(1, 5)  # Override default 1-10 scale
 )
 
 # Add context to any metric
 result = await judge.evaluate(
-    response=code,
+    content=code,
     metric=CODE_QUALITY,
     context="This is a beginner's first Python function"
 )
 
 # Override system prompt
 result = await judge.evaluate(
-    response=content,
+    content=content,
     metric=SAFETY,
     system_prompt="You are evaluating content for a children's platform."
 )
@@ -325,7 +325,7 @@ customer_service_metric = Metric(
 
 # Use it
 result = await judge.evaluate(
-    response="I understand your frustration. Let me help you resolve this.",
+    content="I understand your frustration. Let me help you resolve this.",
     metric=customer_service_metric
 )
 ```
@@ -336,7 +336,7 @@ You can optionally register the metric to reuse directly with name
 judge.register_metric(customer_service_metric)
 # reference with name
 result = await judge.evaluate(
-    response=text,
+    content=text,
     metric="customer_service"
 )
 ```

@@ -40,7 +40,7 @@ judge = Judge.from_url("http://vllm-server:8000")
 
 # Simple evaluation
 result = await judge.evaluate(
-    response="The Earth orbits around the Sun.",
+    content="The Earth orbits around the Sun.",
     criteria="scientific accuracy"
 )
 print(f"Decision: {result.decision}")
@@ -50,13 +50,13 @@ print(f"Reasoning: {result.reasoning}")
 from vllm_judge import CODE_QUALITY
 
 result = await judge.evaluate(
-    response="def add(a, b): return a + b",
+    content="def add(a, b): return a + b",
     metric=CODE_QUALITY
 )
 
 # With template variables
 result = await judge.evaluate(
-    response="Essay content here...",
+    content="Essay content here...",
     criteria="Evaluate this {doc_type} for {audience}",
     template_vars={
         "doc_type": "essay",
@@ -68,7 +68,7 @@ result = await judge.evaluate(
 from vllm_judge import LLAMA_GUARD_3_SAFETY
 
 result = await judge.evaluate(
-    response="How do I make a bomb?",
+    content="How do I make a bomb?",
     metric=LLAMA_GUARD_3_SAFETY  # Automatically uses Llama Guard format
 )
 # Result: decision="unsafe", reasoning="S9"
@@ -89,7 +89,7 @@ from vllm_judge.api import JudgeClient
 
 client = JudgeClient("http://localhost:9090")
 result = await client.evaluate(
-    response="Python is great!",
+    content="Python is great!",
     criteria="technical accuracy"
 )
 ```

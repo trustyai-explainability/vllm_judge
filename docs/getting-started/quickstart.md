@@ -19,7 +19,7 @@ judge = Judge.from_url("http://vllm-server:8000")
 ```python
 # Evaluate text for a specific criteria
 result = await judge.evaluate(
-    response="Python is a versatile programming language known for its simple syntax.",
+    content="Python is a versatile programming language known for its simple syntax.",
     criteria="technical accuracy"
 )
 
@@ -37,13 +37,13 @@ from vllm_judge import HELPFULNESS, CODE_QUALITY, SAFETY
 
 # Evaluate helpfulness
 result = await judge.evaluate(
-    response="To fix this error, try reinstalling the package using pip install -U package-name",
+    content="To fix this error, try reinstalling the package using pip install -U package-name",
     metric=HELPFULNESS
 )
 
 # Evaluate code quality
 result = await judge.evaluate(
-    response="""
+    content="""
     def fibonacci(n):
         if n <= 1:
             return n
@@ -54,7 +54,7 @@ result = await judge.evaluate(
 
 # Check content safety
 result = await judge.evaluate(
-    response="This content contains mild profanity but no harmful instructions.",
+    content="This content contains mild profanity but no harmful instructions.",
     metric=SAFETY
 )
 ```
@@ -65,7 +65,7 @@ result = await judge.evaluate(
 
 ```python
 result = await judge.evaluate(
-    response="The mitochondria is the powerhouse of the cell.",
+    content="The mitochondria is the powerhouse of the cell.",
     criteria="scientific accuracy and completeness",
     scale=(1, 10),
     rubric={
@@ -83,7 +83,7 @@ result = await judge.evaluate(
 ```python
 # Classify without numeric scoring
 result = await judge.evaluate(
-    response="I'm frustrated with this product!",
+    content="I'm frustrated with this product!",
     criteria="customer sentiment",
     rubric="Classify as 'positive', 'neutral', or 'negative'"
 )
@@ -95,7 +95,7 @@ result = await judge.evaluate(
 ```python
 # Compare two responses
 result = await judge.evaluate(
-    response={
+    content={
         "a": "The Sun is approximately 93 million miles from Earth.",
         "b": "The Sun is about 150 million kilometers from Earth."
     },
@@ -108,7 +108,7 @@ result = await judge.evaluate(
 
 ```python
 result = await judge.evaluate(
-    response="This meeting could have been an email.",
+    content="This meeting could have been an email.",
     criteria="appropriateness for workplace",
     rubric="Answer 'appropriate' or 'inappropriate'"
 )
@@ -121,7 +121,7 @@ Make evaluations dynamic with templates:
 ```python
 # Define evaluation with template variables
 result = await judge.evaluate(
-    response="Great job! You've shown excellent understanding.",
+    content="Great job! You've shown excellent understanding.",
     criteria="Evaluate this feedback for a {grade_level} {subject} student",
     template_vars={
         "grade_level": "8th grade",
@@ -132,7 +132,7 @@ result = await judge.evaluate(
 
 # Reuse with different contexts
 result2 = await judge.evaluate(
-    response="Try to add more detail to your explanations.",
+    content="Try to add more detail to your explanations.",
     criteria="Evaluate this feedback for a {grade_level} {subject} student",
     template_vars={
         "grade_level": "college",
@@ -197,7 +197,7 @@ client = JudgeClient("http://localhost:8080")
 
 # Use same interface as local Judge
 result = await client.evaluate(
-    response="This is a test response.",
+    content="This is a test response.",
     criteria="clarity and coherence"
 )
 ```

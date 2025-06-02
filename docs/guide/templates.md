@@ -23,7 +23,7 @@ Use `{variable_name}` in your criteria, rubric, or prompts:
 ```python
 # Basic template
 result = await judge.evaluate(
-    response=tutorial,
+    content=tutorial,
     criteria="Evaluate this tutorial for {audience}",
     template_vars={
         "audience": "beginners"
@@ -37,7 +37,7 @@ result = await judge.evaluate(
 
 ```python
 result = await judge.evaluate(
-    response=code_snippet,
+    content=code_snippet,
     criteria="Review this {language} code for {purpose} following {company} standards",
     template_vars={
         "language": "Python",
@@ -53,7 +53,7 @@ Templates work in rubric text and score descriptions:
 
 ```python
 result = await judge.evaluate(
-    response=essay,
+    content=essay,
     criteria="Evaluate this {doc_type} for {grade_level} students",
     scale=(1, 10),
     rubric={
@@ -94,7 +94,7 @@ For advanced templating with logic:
 ```python
 # Conditional content
 result = await judge.evaluate(
-    response=content,
+    content=content,
     criteria="""
     Evaluate this content for {audience}.
     {% if technical_level == 'advanced' %}
@@ -112,7 +112,7 @@ result = await judge.evaluate(
 
 # Loops in templates
 result = await judge.evaluate(
-    response=api_docs,
+    content=api_docs,
     criteria="""
     Check documentation for these aspects:
     {% for aspect in aspects %}
@@ -151,13 +151,13 @@ review_metric = Metric(
 
 # Use with different products
 tech_result = await judge.evaluate(
-    response="This laptop has great battery life...",
+    content="This laptop has great battery life...",
     metric=review_metric,
     template_vars={"product_type": "electronics"}
 )
 
 book_result = await judge.evaluate(
-    response="Engaging plot with well-developed characters...",
+    content="Engaging plot with well-developed characters...",
     metric=review_metric,
     template_vars={
         "product_type": "book",
@@ -226,7 +226,7 @@ async def evaluate_customer_response(
     urgency_phrase = "immediate resolution" if issue_severity == "high" else "timely assistance"
     
     result = await judge.evaluate(
-        response=response,
+        content=response,
         criteria="""Evaluate this {channel} response to a {customer_type} customer.
         The response should provide {urgency_phrase} for their {issue_severity} priority issue.""",
         template_vars={
@@ -264,13 +264,13 @@ code_review_template = Metric(
 
 # Use for different languages
 python_result = await judge.evaluate(
-    response=python_code,
+    content=python_code,
     metric=code_review_template,
     template_vars={"language": "Python", "purpose": "data analysis"}
 )
 
 rust_result = await judge.evaluate(
-    response=rust_code,
+    content=rust_code,
     metric=code_review_template,
     template_vars={"language": "Rust", "purpose": "systems programming"}
 )
@@ -322,7 +322,7 @@ metric = Metric(
 # This will raise an error - missing 'topic'
 try:
     result = await judge.evaluate(
-        response="...",
+        content="...",
         metric=metric,
         template_vars={"doc_type": "article", "audience": "general"}
     )
@@ -407,7 +407,7 @@ product_review_metric = Metric(
 
 # Analyze electronics review
 result = await judge.evaluate(
-    response="This smartphone has amazing battery life...",
+    content="This smartphone has amazing battery life...",
     metric=product_review_metric,
     template_vars={
         "product_category": "electronics",
@@ -454,7 +454,7 @@ async def document_review_pipeline(document: str, doc_metadata: dict):
     
     for stage in stages:
         result = await judge.evaluate(
-            response=document,
+            content=document,
             criteria=stage["criteria"],
             template_vars=base_vars,
             scale=(1, 10)
@@ -509,7 +509,7 @@ api_docs_metric = Metric(
 
 # Evaluate REST API docs
 result = await judge.evaluate(
-    response=api_documentation,
+    content=api_documentation,
     metric=api_docs_metric,
     template_vars={
         "api_type": "REST",
@@ -532,7 +532,7 @@ result = await judge.evaluate(
 # Error: Missing required template variables
 try:
     result = await judge.evaluate(
-        response="...",
+        content="...",
         criteria="Evaluate {missing_var}",
         template_vars={}  # Forgot to provide variables
     )
@@ -600,7 +600,7 @@ judge.register_metric(metric)
 # Use many times efficiently
 for item in items_to_evaluate:
     result = await judge.evaluate(
-        response=item["response"],
+        content=item["response"],
         metric="cached_evaluation",  # Reference by name
         template_vars={
             "var1": item["var1"],

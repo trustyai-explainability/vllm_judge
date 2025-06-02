@@ -63,7 +63,7 @@ class Judge:
     
     async def evaluate(
         self,
-        response: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str]],
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
         scale: Optional[Tuple[int, int]] = None,
@@ -79,7 +79,7 @@ class Judge:
         Universal evaluation method that adapts to use case.
         
         Args:
-            response: String for single evaluation, dict {"a": ..., "b": ...} for comparison
+            content: String for single evaluation, dict {"a": ..., "b": ...} for comparison
             criteria: What to evaluate for (can contain template variables)
             rubric: Instructions for evaluation, can be string or dict containing mapping of score to description (can contain template variables)
             scale: Optional numeric scale (min, max)
@@ -101,12 +101,12 @@ class Judge:
         """
         # Handle model-specific metrics
         if isinstance(metric, ModelSpecificMetric):
-            assert isinstance(response, str), "Model-specific metrics only support string content for now"
+            assert isinstance(content, str), "Model-specific metrics only support string content for now"
 
             # logger.info(f"Evaluating model-specific metric {metric.name}.")
             logger.info(f"We assume you're using {metric.model_pattern} type model. If not, please do not use this metric and use a normal metric instead.")
             # Skip ALL our formatting
-            messages = [{"role": "user", "content": response}]
+            messages = [{"role": "user", "content": content}]
             
             # vLLM applies model's chat template automatically
             llm_response = await self._call_model(messages)
@@ -157,7 +157,7 @@ class Judge:
         
         # Build messages
         messages = PromptBuilder.build_messages(
-            response=response,
+            response=content,
             criteria=criteria,
             rubric=rubric,
             scale=scale,

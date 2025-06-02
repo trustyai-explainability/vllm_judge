@@ -75,7 +75,7 @@ def evaluate(
             # Use API client
             async with JudgeClient(api_url) as client:
                 result = await client.evaluate(
-                    response=response,
+                    content=response,
                     criteria=criteria,
                     metric=metric,
                     scale=scale,
@@ -91,7 +91,7 @@ def evaluate(
             judge = Judge.from_url(base_url, model=model)
             async with judge:
                 result = await judge.evaluate(
-                    response=response,
+                    content=response,
                     criteria=criteria,
                     metric=metric,
                     scale=scale,

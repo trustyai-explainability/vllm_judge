@@ -8,7 +8,7 @@ vLLM Judge uses a single `evaluate()` method that adapts to your needs:
 
 ```python
 result = await judge.evaluate(
-    response="...",        # What to evaluate
+    content="...",        # What to evaluate
     criteria="...",        # What to evaluate for
     # Optional parameters to control evaluation
 )
@@ -23,13 +23,13 @@ The simplest form - just provide text and criteria:
 ```python
 # Basic evaluation
 result = await judge.evaluate(
-    response="The Earth is the third planet from the Sun.",
+    content="The Earth is the third planet from the Sun.",
     criteria="scientific accuracy"
 )
 
 # Multiple criteria
 result = await judge.evaluate(
-    response="Dear customer, thank you for your feedback...",
+    content="Dear customer, thank you for your feedback...",
     criteria="professionalism, empathy, and clarity"
 )
 ```
@@ -51,14 +51,14 @@ Control the scoring range:
 ```python
 # 5-point scale
 result = await judge.evaluate(
-    response="The product works as advertised.",
+    content="The product works as advertised.",
     criteria="review helpfulness",
     scale=(1, 5)
 )
 
 # 100-point scale for fine-grained scoring
 result = await judge.evaluate(
-    response=essay_text,
+    content=essay_text,
     criteria="writing quality",
     scale=(0, 100)
 )
@@ -70,7 +70,7 @@ Provide evaluation guidance as text:
 
 ```python
 result = await judge.evaluate(
-    response="I hate this product!",
+    content="I hate this product!",
     criteria="sentiment analysis",
     rubric="Classify as 'positive', 'neutral', or 'negative' based on emotional tone"
 )
@@ -83,7 +83,7 @@ Define specific score meanings:
 
 ```python
 result = await judge.evaluate(
-    response=code_snippet,
+    content=code_snippet,
     criteria="code quality",
     scale=(1, 10),
     rubric={
@@ -104,7 +104,7 @@ Compare two responses by providing a dictionary:
 ```python
 # Compare two responses
 result = await judge.evaluate(
-    response={
+    content={
         "a": "Python is great for beginners due to its simple syntax.",
         "b": "Python's intuitive syntax makes it ideal for newcomers."
     },
@@ -114,7 +114,7 @@ result = await judge.evaluate(
 
 # With additional context
 result = await judge.evaluate(
-    response={
+    content={
         "a": customer_response_1,
         "b": customer_response_2
     },
@@ -131,7 +131,7 @@ Add context to improve evaluation accuracy:
 
 ```python
 result = await judge.evaluate(
-    response="Just use the default settings.",
+    content="Just use the default settings.",
     criteria="helpfulness",
     context="User asked how to configure advanced security settings"
 )
@@ -144,7 +144,7 @@ Guide the evaluation with examples:
 
 ```python
 result = await judge.evaluate(
-    response="Your code has a bug on line 5.",
+    content="Your code has a bug on line 5.",
     criteria="constructive feedback quality",
     scale=(1, 10),
     examples=[
@@ -169,7 +169,7 @@ Take full control of the evaluator's persona:
 ```python
 # Expert evaluator
 result = await judge.evaluate(
-    response=medical_advice,
+    content=medical_advice,
     criteria="medical accuracy and safety",
     system_prompt="""You are a licensed medical professional reviewing 
     health information for accuracy and potential harm. Be extremely 
@@ -178,7 +178,7 @@ result = await judge.evaluate(
 
 # Specific domain expert
 result = await judge.evaluate(
-    response=legal_document,
+    content=legal_document,
     criteria="legal compliance",
     system_prompt="""You are a corporate lawyer specializing in GDPR 
     compliance. Evaluate for regulatory adherence."""
@@ -193,7 +193,7 @@ When you provide a scale, you get numeric scoring:
 
 ```python
 result = await judge.evaluate(
-    response="Great product!",
+    content="Great product!",
     criteria="review quality",
     scale=(1, 5)
 )
@@ -208,7 +208,7 @@ Without a scale but with category rubric:
 
 ```python
 result = await judge.evaluate(
-    response="This might be considered offensive.",
+    content="This might be considered offensive.",
     criteria="content moderation",
     rubric="Classify as 'safe', 'warning', or 'unsafe'"
 )
@@ -223,7 +223,7 @@ For yes/no evaluations:
 
 ```python
 result = await judge.evaluate(
-    response=user_message,
+    content=user_message,
     criteria="spam detection",
     rubric="Determine if this is 'spam' or 'not spam'"
 )
@@ -237,7 +237,7 @@ You can request both classification and scoring:
 
 ```python
 result = await judge.evaluate(
-    response=essay,
+    content=essay,
     criteria="academic quality",
     rubric="""
     Grade the essay:
@@ -263,7 +263,7 @@ result = await judge.evaluate(
 async def qa_check(response: str, threshold: float = 7.0):
     """Check if response meets quality threshold."""
     result = await judge.evaluate(
-        response=response,
+        content=response,
         criteria="helpfulness, accuracy, and professionalism",
         scale=(1, 10)
     )
@@ -283,7 +283,7 @@ async def qa_check(response: str, threshold: float = 7.0):
 async def compare_models(prompt: str, response_a: str, response_b: str):
     """Compare two model responses."""
     result = await judge.evaluate(
-        response={"a": response_a, "b": response_b},
+        content={"a": response_a, "b": response_b},
         criteria="helpfulness, accuracy, and clarity",
         context=f"User prompt: {prompt}"
     )
@@ -310,7 +310,7 @@ async def comprehensive_evaluation(content: str):
     results = {}
     for aspect, criteria in aspects.items():
         result = await judge.evaluate(
-            response=content,
+            content=content,
             criteria=criteria,
             scale=(1, 10)
         )
