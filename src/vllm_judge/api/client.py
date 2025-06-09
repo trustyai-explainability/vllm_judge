@@ -66,6 +66,7 @@ class JudgeClient:
     async def evaluate(
         self,
         content: Union[str, Dict[str, str]],
+        input: Optional[str] = None,
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
         scale: Optional[Tuple[int, int]] = None,
@@ -87,7 +88,8 @@ class JudgeClient:
             EvaluationResult
         """
         request = EvaluateRequest(
-            response=content,
+            content=content,
+            input=input,
             criteria=criteria,
             rubric=rubric,
             scale=list(scale) if scale else None,
@@ -277,37 +279,69 @@ class JudgeClient:
     async def score(
         self,
         criteria: str,
-        response: str,
+        content: str,
+        input: Optional[str] = None,
         scale: Tuple[int, int] = (1, 10),
         **kwargs
     ) -> EvaluationResult:
         """Quick scoring evaluation."""
         return await self.evaluate(
-            response=response,
+            content=content,
+            input=input,
             criteria=criteria,
             scale=scale,
             **kwargs
         )
-    
+    async def qa_evaluate(
+        self,
+        question: str,
+        answer: str,
+        criteria: str = "accuracy and completeness",
+        scale: Tuple[int, int] = (1, 10),
+        **kwargs
+    ) -> EvaluationResult:
+        """
+        Convenience method for QA evaluation via API.
+        
+        Args:
+            question: The question being answered
+            answer: The answer to evaluate
+            criteria: Evaluation criteria (default: "accuracy and completeness")
+            scale: Numeric scale (default 1-10)
+            **kwargs: Additional parameters
+            
+        Returns:
+            EvaluationResult with QA assessment
+        """
+        return await self.evaluate(
+            content=answer,
+            input=question,
+            criteria=criteria,
+            scale=scale,
+            **kwargs
+        )
     async def compare(
         self,
         response_a: str,
         response_b: str,
         criteria: str,
+        input: Optional[str] = None,
         **kwargs
     ) -> EvaluationResult:
         """Quick comparison evaluation."""
         return await self.evaluate(
-            response={"a": response_a, "b": response_b},
+            content={"a": response_a, "b": response_b},
+            input=input,
             criteria=criteria,
             **kwargs
         )
     
     async def classify(
         self,
-        response: str,
+        content: str,
         categories: List[str],
         criteria: str = None,
+        input: Optional[str] = None,
         **kwargs
     ) -> EvaluationResult:
         """Quick classification evaluation."""
@@ -317,7 +351,8 @@ class JudgeClient:
         rubric = f"Classify into one of these categories: {', '.join(categories)}"
         
         return await self.evaluate(
-            response=response,
+            content=content,
+            input=input,
             criteria=criteria,
             rubric=rubric,
             **kwargs
@@ -325,7 +360,8 @@ class JudgeClient:
     
     async def evaluate_streaming(
         self,
-        response: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str]],
+        input: Optional[str] = None,
         **kwargs
     ) -> AsyncIterator[str]:
         """
@@ -339,7 +375,8 @@ class JudgeClient:
         async with websockets.connect(ws_url) as websocket:
             # Send request
             request_data = {
-                "response": response,
+                "content": content,
+                "input": input,
                 **kwargs
             }
             await websocket.send(json.dumps(request_data))

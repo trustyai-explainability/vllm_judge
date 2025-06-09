@@ -64,6 +64,7 @@ class Judge:
     async def evaluate(
         self,
         content: Union[str, Dict[str, str]],
+        input: Optional[str] = None,
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
         scale: Optional[Tuple[int, int]] = None,
@@ -80,6 +81,7 @@ class Judge:
         
         Args:
             content: String for single evaluation, dict {"a": ..., "b": ...} for comparison
+            input: Optional input/question/prompt that the content is responding to
             criteria: What to evaluate for (can contain template variables)
             rubric: Instructions for evaluation, can be string or dict containing mapping of score to description (can contain template variables)
             scale: Optional numeric scale (min, max)
@@ -140,6 +142,9 @@ class Judge:
         
         # Merge template variables (metric defaults + user provided)
         all_template_vars = {**metric_template_vars, **(template_vars or {})}
+        # Add input to template variables if provided
+        if input:
+            all_template_vars["input"] = input
         
         # Process templates
         criteria = TemplateProcessor.apply_template(
@@ -154,10 +159,14 @@ class Judge:
         context = TemplateProcessor.apply_template(
             context, all_template_vars, engine, strict=True
         )
+        input = TemplateProcessor.apply_template(
+            input, all_template_vars, engine, strict=True
+        )
         
         # Build messages
         messages = PromptBuilder.build_messages(
-            response=content,
+            content=content,
+            input=input,
             criteria=criteria,
             rubric=rubric,
             scale=scale,
@@ -264,7 +273,8 @@ class Judge:
     async def score(
         self,
         criteria: str,
-        response: str,
+        content: str,
+        input: Optional[str] = None,
         scale: Tuple[int, int] = (1, 10),
         **kwargs
     ) -> EvaluationResult:
@@ -273,7 +283,8 @@ class Judge:
         
         Args:
             criteria: What to evaluate
-            response: Response to evaluate
+            content: Response to evaluate
+            input: Optional input/question/prompt that the response addresses
             scale: Numeric scale (default 1-10)
             **kwargs: Additional parameters
             
@@ -281,7 +292,36 @@ class Judge:
             EvaluationResult with numeric score
         """
         return await self.evaluate(
-            response=response,
+            content=content,
+            input=input,
+            criteria=criteria,
+            scale=scale,
+            **kwargs
+        )
+    async def qa_evaluate(
+        self,
+        question: str,
+        answer: str,
+        criteria: str = "accuracy and completeness",
+        scale: Tuple[int, int] = (1, 10),
+        **kwargs
+    ) -> EvaluationResult:
+        """
+        Convenience method for QA evaluation.
+        
+        Args:
+            question: The question being answered
+            answer: The answer to evaluate
+            criteria: Evaluation criteria (default: "accuracy and completeness")
+            scale: Numeric scale (default 1-10)
+            **kwargs: Additional parameters
+            
+        Returns:
+            EvaluationResult with QA assessment
+        """
+        return await self.evaluate(
+            content=answer,
+            input=question,
             criteria=criteria,
             scale=scale,
             **kwargs
@@ -292,6 +332,7 @@ class Judge:
         response_a: str,
         response_b: str,
         criteria: str,
+        input: Optional[str] = None,
         **kwargs
     ) -> EvaluationResult:
         """
@@ -301,31 +342,35 @@ class Judge:
             response_a: First response
             response_b: Second response
             criteria: What to compare on
+            input: Optional input/question that both responses address
             **kwargs: Additional parameters
             
         Returns:
             EvaluationResult with decision of 'response_a' or 'response_b'
         """
         return await self.evaluate(
-            response={"a": response_a, "b": response_b},
+            content={"a": response_a, "b": response_b},
+            input=input,
             criteria=criteria,
             **kwargs
         )
     
     async def classify(
         self,
-        response: str,
+        content: str,
         categories: List[str],
         criteria: str = None,
+        input: Optional[str] = None,
         **kwargs
     ) -> EvaluationResult:
         """
         Quick classification evaluation.
         
         Args:
-            response: Response to classify
+            content: Content to classify
             categories: List of categories
             criteria: Classification criteria
+            input: Optional input/question that the response addresses
             **kwargs: Additional parameters
             
         Returns:
@@ -337,7 +382,8 @@ class Judge:
         rubric = f"Classify into one of these categories: {', '.join(categories)}"
         
         return await self.evaluate(
-            response=response,
+            content=content,
+            input=input,
             criteria=criteria,
             rubric=rubric,
             **kwargs
@@ -396,7 +442,7 @@ class Judge:
         Batch evaluation with high concurrency.
         
         Args:
-            data: List of evaluation inputs (each must have 'response' key)
+            data: List of evaluation inputs (each must have 'content' key)
             max_concurrent: Maximum concurrent requests
             progress_callback: Optional callback for progress updates
             **default_kwargs: Default parameters for all evaluations
@@ -406,9 +452,10 @@ class Judge:
             
         Example:
             results = await judge.batch_evaluate([
-                {"response": "Text 1", "criteria": "clarity"},
-                {"response": {"a": "A", "b": "B"}, "criteria": "quality"},
-                {"response": "Text 3", "metric": "safety"}
+                {"content": "Text 1", "criteria": "clarity"},
+                {"content": "Paris", "input": "What is the capital of France?", "criteria": "accuracy"},
+                {"content": {"a": "A", "b": "B"}, "criteria": "quality"},
+                {"content": "Text 3", "metric": "safety"}
             ])
         """
         processor = BatchProcessor(self, max_concurrent or self.config.max_concurrent)

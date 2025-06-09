@@ -6,8 +6,9 @@ class PromptBuilder:
     
     @staticmethod
     def build_messages(
-        response: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str]],
         criteria: str,
+        input: Optional[str] = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
         scale: Optional[Tuple[int, int]] = None,
         examples: List[Dict[str, Any]] = None,
@@ -19,8 +20,9 @@ class PromptBuilder:
         Build chat messages for evaluation.
         
         Args:
-            response: Single response or dict with 'a' and 'b' for comparison
+            content: Single response or dict with 'a' and 'b' for comparison
             criteria: What to evaluate for
+            input: Optional input/question/prompt that the response addresses
             rubric: Evaluation guide
             scale: Numeric scale (min, max)
             examples: Few-shot examples
@@ -32,7 +34,7 @@ class PromptBuilder:
             List of chat messages
         """
         # Detect evaluation type
-        is_comparison = isinstance(response, dict) and "a" in response and "b" in response
+        is_comparison = isinstance(content, dict) and "a" in content and "b" in content
         
         # System message
         if not system_prompt:
@@ -54,7 +56,8 @@ class PromptBuilder:
         
         # Build user message
         user_content = PromptBuilder._build_user_prompt(
-            response=response,
+            content=content,
+            input=input,
             criteria=criteria,
             rubric=rubric,
             scale=scale,
@@ -71,30 +74,43 @@ class PromptBuilder:
     
     @staticmethod
     def _build_user_prompt(
-        response: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str]],
         criteria: str,
         rubric: Union[str, Dict[Union[int, float], str]],
         scale: Optional[Tuple[int, int]],
         examples: List[Dict[str, Any]],
         is_comparison: bool,
         context: Optional[str] = None,
+        input: Optional[str] = None,
         **kwargs
     ) -> str:
         """Build the user message content."""
         parts = []
+
+        # Add input section if provided
+        if input:
+            parts.append("Given the following input/question:")
+            parts.append(f'"{input}"')
+            parts.append("")
         
         # Task description
         if is_comparison:
-            parts.append(f"Compare these two responses based on: {criteria}")
+            if input:
+                parts.append(f"Compare how well these two responses address the input for: {criteria}")
+            else:
+                parts.append(f"Compare these two responses based on: {criteria}")
             if context:
                 parts.append(f"\nContext: {context}")
-            parts.append(f"\nResponse A:\n{response['a']}")
-            parts.append(f"\nResponse B:\n{response['b']}")
+            parts.append(f"\nResponse A:\n{content['a']}")
+            parts.append(f"\nResponse B:\n{content['b']}")
         else:
-            parts.append(f"Evaluate the following response based on: {criteria}")
+            if input:
+                parts.append(f"Evaluate how well this response addresses the input for: {criteria}")
+            else:
+                parts.append(f"Evaluate the following response based on: {criteria}")
             if context:
                 parts.append(f"\nContext: {context}")
-            parts.append(f"\nResponse to evaluate:\n{response}")
+            parts.append(f"\nResponse to evaluate:\n{content}")
         
         # Add scale and rubric
         if scale:
@@ -118,8 +134,10 @@ class PromptBuilder:
                 parts.append(f"\nExample {i}:")
                 
                 # Handle different example formats
-                if "response" in ex:
-                    parts.append(f"Response: {ex['response']}")
+                if "input" in ex:
+                    parts.append(f"Input: {ex['input']}")
+                if "content" in ex:
+                    parts.append(f"Response: {ex['content']}")
                 elif "text" in ex:
                     parts.append(f"Text: {ex['text']}")
                 

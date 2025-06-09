@@ -83,12 +83,12 @@ class BatchProcessor:
         async with self.semaphore:
             try:
                 # Extract response from kwargs
-                response = eval_kwargs.pop('response', None)
-                if not response:
-                    raise ValueError(f"Item {index} missing 'response' field")
+                content = eval_kwargs.pop('content', None)
+                if not content:
+                    raise ValueError(f"Item {index} missing 'content' field")
                 
                 # Perform evaluation
-                result = await self.judge.evaluate(response=response, **eval_kwargs)
+                result = await self.judge.evaluate(content=content, **eval_kwargs)
                 
                 # Update progress
                 async with self.progress_lock:

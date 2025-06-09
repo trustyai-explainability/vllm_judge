@@ -109,7 +109,8 @@ async def evaluate(request: EvaluateRequest):
         
         # Perform evaluation with template support
         result = await judge.evaluate(
-            response=request.response,
+            content=request.content,
+            input=request.input,
             criteria=request.criteria,
             rubric=request.rubric,
             scale=scale,
@@ -422,7 +423,8 @@ async def websocket_evaluate(websocket: WebSocket):
                 scale = tuple(request.scale) if request.scale else None
                 
                 result = await judge.evaluate(
-                    response=request.response,
+                    content=request.content,
+                    input=request.input,
                     criteria=request.criteria,
                     rubric=request.rubric,
                     scale=scale,

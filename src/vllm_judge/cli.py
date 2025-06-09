@@ -50,7 +50,8 @@ def serve(base_url: str, model: str, host: str, port: int, reload: bool, max_con
 @click.option('--api-url', help='Judge API URL (if using remote server)')
 @click.option('--base-url', help='vLLM server URL (if using local)')
 @click.option('--model', help='Model name (if using local)')
-@click.option('--response', required=True, help='Text to evaluate')
+@click.option('--content', required=True, help='Text to evaluate')
+@click.option('--input', help='Input/question/prompt that the content responds to')
 @click.option('--criteria', help='Evaluation criteria')
 @click.option('--metric', help='Pre-defined metric name')
 @click.option('--scale', nargs=2, type=int, help='Numeric scale (min max)')
@@ -61,7 +62,8 @@ def evaluate(
     api_url: Optional[str],
     base_url: Optional[str],
     model: Optional[str],
-    response: str,
+    content: str,
+    input: Optional[str],
     criteria: Optional[str],
     metric: Optional[str],
     scale: Optional[tuple],
@@ -75,7 +77,8 @@ def evaluate(
             # Use API client
             async with JudgeClient(api_url) as client:
                 result = await client.evaluate(
-                    content=response,
+                    content=content,
+                    input=input,
                     criteria=criteria,
                     metric=metric,
                     scale=scale,
@@ -91,7 +94,8 @@ def evaluate(
             judge = Judge.from_url(base_url, model=model)
             async with judge:
                 result = await judge.evaluate(
-                    content=response,
+                    content=content,
+                    input=input,
                     criteria=criteria,
                     metric=metric,
                     scale=scale,
@@ -110,6 +114,60 @@ def evaluate(
     
     asyncio.run(run_evaluation())
 
+@cli.command()
+@click.option('--api-url', help='Judge API URL (if using remote server)')
+@click.option('--base-url', help='vLLM server URL (if using local)')
+@click.option('--model', help='Model name (if using local)')
+@click.option('--question', required=True, help='Question to evaluate answer for')
+@click.option('--answer', required=True, help='Answer to evaluate')
+@click.option('--criteria', default='accuracy and completeness', help='Evaluation criteria')
+@click.option('--scale', nargs=2, type=int, default=[1, 10], help='Numeric scale (min max)')
+@click.option('--output', type=click.Choice(['json', 'text']), default='text', help='Output format')
+def qa_evaluate(
+    api_url: Optional[str],
+    base_url: Optional[str],
+    model: Optional[str],
+    question: str,
+    answer: str,
+    criteria: str,
+    scale: tuple,
+    output: str
+):
+    """Evaluate a QA pair (question and answer)."""
+    async def run_qa_evaluation():
+        if api_url:
+            async with JudgeClient(api_url) as client:
+                result = await client.qa_evaluate(
+                    question=question,
+                    answer=answer,
+                    criteria=criteria,
+                    scale=scale
+                )
+        else:
+            if not base_url:
+                click.echo("Error: Either --api-url or --base-url is required", err=True)
+                sys.exit(1)
+            
+            judge = Judge.from_url(base_url, model=model)
+            async with judge:
+                result = await judge.qa_evaluate(
+                    question=question,
+                    answer=answer,
+                    criteria=criteria,
+                    scale=scale
+                )
+        
+        if output == 'json':
+            click.echo(json.dumps(result.model_dump(), indent=2))
+        else:
+            click.echo(f"Question: {question}")
+            click.echo(f"Answer: {answer}")
+            click.echo(f"Decision: {result.decision}")
+            if result.score is not None:
+                click.echo(f"Score: {result.score}")
+            click.echo(f"Reasoning: {result.reasoning}")
+    
+    asyncio.run(run_qa_evaluation())
 
 @cli.command()
 @click.option('--api-url', help='Judge API URL (if using remote server)')
@@ -118,6 +176,7 @@ def evaluate(
 @click.option('--response-a', required=True, help='First response')
 @click.option('--response-b', required=True, help='Second response')
 @click.option('--criteria', required=True, help='Comparison criteria')
+@click.option('--input', help='Input/question that both responses address')
 @click.option('--output', type=click.Choice(['json', 'text']), default='text', help='Output format')
 def compare(
     api_url: Optional[str],
@@ -126,6 +185,7 @@ def compare(
     response_a: str,
     response_b: str,
     criteria: str,
+    input: Optional[str],
     output: str
 ):
     """Compare two responses."""
@@ -135,7 +195,8 @@ def compare(
                 result = await client.compare(
                     response_a=response_a,
                     response_b=response_b,
-                    criteria=criteria
+                    criteria=criteria,
+                    input=input
                 )
         else:
             if not base_url:
@@ -147,12 +208,17 @@ def compare(
                 result = await judge.compare(
                     response_a=response_a,
                     response_b=response_b,
-                    criteria=criteria
+                    criteria=criteria,
+                    input=input
                 )
         
         if output == 'json':
             click.echo(json.dumps(result.model_dump(), indent=2))
         else:
+            if input:
+                click.echo(f"Input: {input}")
+            click.echo(f"Response A: {response_a}")
+            click.echo(f"Response B: {response_b}")
             click.echo(f"Winner: {result.decision}")
             click.echo(f"Reasoning: {result.reasoning}")
     
@@ -281,6 +347,16 @@ def batch(api_url: str, file, use_async: bool, max_concurrent: Optional[int], ou
 
 def main():
     """Main entry point."""
+    cli.help = """vLLM Judge - LLM-as-a-Judge evaluation tool.
+
+Features:
+- Single response evaluation with optional input context
+- QA (Question-Answer) evaluation  
+- Response comparison with optional input context
+- Batch evaluation from JSON files
+- API server mode
+- Built-in and custom metrics with template support
+"""
     cli()
 
 
