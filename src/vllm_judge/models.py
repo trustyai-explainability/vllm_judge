@@ -99,7 +99,8 @@ class Metric:
         system_prompt: Optional[str] = None,
         template_vars: Optional[Dict[str, Any]] = None,
         required_vars: Optional[List[str]] = None,
-        template_engine: Union[str, TemplateEngine] = TemplateEngine.FORMAT
+        template_engine: Union[str, TemplateEngine] = TemplateEngine.FORMAT,
+        additional_instructions: Optional[str] = None
     ):
         """
         Initialize a reusable metric.
@@ -125,7 +126,7 @@ class Metric:
         self.template_vars = template_vars or {}
         self.required_vars = required_vars or []
         self.template_engine = TemplateEngine(template_engine)
-        
+        self.additional_instructions = additional_instructions
         # Auto-detect required variables if not specified
         if not self.required_vars and self.template_engine == TemplateEngine.FORMAT:
             self._auto_detect_required_vars()

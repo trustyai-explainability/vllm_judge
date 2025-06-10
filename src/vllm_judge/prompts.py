@@ -48,7 +48,7 @@ class PromptBuilder:
         # Output format instructions
         system_prompt+="\nYou must respond in JSON format:\n"
         system_prompt+="""{
-    "decision": <your judgment - string|number|boolean>,
+    "decision": <your judgment - string|boolean>,
     "reasoning": "<concise explanation of your judgment>",
     "score": <numeric score if requested, otherwise null>
 }"""
@@ -105,16 +105,18 @@ class PromptBuilder:
             parts.append(f"\nResponse B:\n{content['b']}")
         else:
             if input:
-                parts.append(f"Evaluate how well this response addresses the input for: {criteria}")
+                parts.append(f"Evaluate how well this content addresses the input for: {criteria}")
             else:
-                parts.append(f"Evaluate the following response based on: {criteria}")
+                parts.append(f"Evaluate the following content based on: {criteria}")
             if context:
                 parts.append(f"\nContext: {context}")
-            parts.append(f"\nResponse to evaluate:\n{content}")
+            parts.append(f"\nContent to evaluate:\n{content}")
         
+        parts.append(f"\nYou must return a decision label/class (your judgement) for the `decision` field and a concise explanation for the `reasoning` field.")
+
         # Add scale and rubric
         if scale:
-            parts.append(f"\nProvide a score from {scale[0]} to {scale[1]}")
+            parts.append(f"\nIn addition to these, provide a score from {scale[0]} to {scale[1]}")
             
             if isinstance(rubric, dict):
                 parts.append("\nScoring guide:")
@@ -137,7 +139,7 @@ class PromptBuilder:
                 if "input" in ex:
                     parts.append(f"Input: {ex['input']}")
                 if "content" in ex:
-                    parts.append(f"Response: {ex['content']}")
+                    parts.append(f"Content: {ex['content']}")
                 elif "text" in ex:
                     parts.append(f"Text: {ex['text']}")
                 
@@ -156,7 +158,7 @@ class PromptBuilder:
         # Output format instructions
         parts.append("\nYou must respond in JSON format:")
         parts.append("""{
-    "decision": <your judgment - string|number|boolean>,
+    "decision": <your judgment - string|boolean>,
     "reasoning": "<concise explanation of your judgment>",
     "score": <numeric score if requested, otherwise null>
 }""")

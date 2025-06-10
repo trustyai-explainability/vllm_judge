@@ -65,7 +65,7 @@ result = await judge.evaluate(
     content="Try restarting your computer to fix the issue.",
     metric=HELPFULNESS
 )
-# Scale: 1-10
+# Scale: 0-1
 # High scores: Thoroughly addresses the request
 # Low scores: Unhelpful or misses the point
 ```
@@ -78,7 +78,7 @@ result = await judge.evaluate(
     content="Python was created by Guido van Rossum in 1991.",
     metric=ACCURACY
 )
-# Scale: 1-10
+# Scale: 0-1
 # High scores: Completely accurate
 # Low scores: Contains errors or misinformation
 ```
@@ -121,18 +121,17 @@ result = await judge.evaluate(
 Classifies content safety level.
 
 ```python
-# Works with specialized safety models out-of-the-box
+result = await judge.evaluate(
+    content="This tutorial shows how to build a bomb.",
+    metric=SAFETY
+)
+
+# If working with specialized models like Llama Guard
 result = await judge.evaluate(
     content="How do I make a bomb?",
     metric=LLAMA_GUARD_3_SAFETY  # Automatically uses Llama Guard format
 )
 # Result: decision="unsafe", reasoning="S9"
-
-# If not using specialized models, use LLM of your choice with generic metric
-result = await judge.evaluate(
-    content="This tutorial shows how to build a web scraper.",
-    metric=SAFETY
-)
 ```
 
 #### TOXICITY
@@ -143,7 +142,7 @@ result = await judge.evaluate(
     content="I disagree with your opinion on this matter.",
     metric=TOXICITY
 )
-# Scale: 0-10 (0 = no toxicity, 10 = extremely toxic)
+# Scale: 0-1 (1 = no toxicity, 0 = extremely toxic)
 ```
 
 ### 💻 Code Quality Metrics
@@ -161,7 +160,7 @@ result = await judge.evaluate(
     """,
     metric=CODE_QUALITY
 )
-# Scale: 1-10
+# Scale: 0-1
 # Evaluates: correctness, efficiency, readability, best practices
 ```
 
@@ -246,6 +245,29 @@ result = await judge.evaluate(
     metric=FACTUAL
 )
 ```
+### 💬 NLP Metrics
+
+#### TRANSLATION QUALITY
+Evaluates translation quality and accuracy
+
+```python
+result = await judge.evaluate(
+    content="The quick brown fox jumps over the lazy dog",
+    input="El rápido zorro marrón salta sobre el perro perezoso",
+    context="Translate from Spanish to English",
+    metric=TRANSLATION_QUALITY
+)
+```
+
+#### SUMMARIZATION QUALITY
+
+```python
+result = await judge.evaluate(
+   content="Researchers at MIT developed a new battery technology using aluminum and sulfur, offering a cheaper alternative to lithium-ion batteries. The batteries can charge fully in under a minute and withstand thousands of cycles. This breakthrough could make renewable energy storage more affordable for grid-scale applications.",
+   input=article,
+   metric=SUMMARIZATION_QUALITY
+)
+```
 
 ### 🏥 Domain-Specific Metrics
 
@@ -257,7 +279,7 @@ result = await judge.evaluate(
     content="For headaches, drink plenty of water and rest.",
     metric=MEDICAL_ACCURACY
 )
-# Scale: 1-5
+# Scale: 0-1
 # Includes safety considerations
 # Note: For educational evaluation only
 ```
@@ -283,7 +305,7 @@ You can override any metric parameter:
 result = await judge.evaluate(
     content="Here's the solution to your problem...",
     metric=HELPFULNESS,
-    scale=(1, 5)  # Override default 1-10 scale
+    scale=(1, 5)  # Override default 0-1 scale
 )
 
 # Add context to any metric
@@ -356,12 +378,12 @@ email_quality_metric = Metric(
     },
     examples=[
         {
-            "response": "Hey, wanted to touch base about that thing",
+            "content": "Hey, wanted to touch base about that thing",
             "score": 2,
             "reasoning": "Too casual and vague for professional context"
         },
         {
-            "response": "Dear Team, I hope this email finds you well. I'm writing to discuss...",
+            "content": "Dear Team, I hope this email finds you well. I'm writing to discuss...",
             "score": 5,
             "reasoning": "Professional greeting, clear purpose, appropriate tone"
         }

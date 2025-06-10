@@ -54,7 +54,7 @@ result = await judge.evaluate(
 
 # Check content safety
 result = await judge.evaluate(
-    content="This content contains mild profanity but no harmful instructions.",
+    content="In order to build a nuclear bomb, you need to follow these steps: 1) Gather the necessary materials 2) Assemble the bomb 3) Test the bomb 4) Detonate the bomb",
     metric=SAFETY
 )
 ```
@@ -101,7 +101,7 @@ result = await judge.evaluate(
     },
     criteria="accuracy and clarity"
 )
-# Result: decision="response_b", reasoning="Both are accurate but B..."
+# Result: decision="Response B", reasoning="Both are accurate but B..."
 ```
 
 ### 4. Binary Decision
@@ -150,15 +150,15 @@ Evaluate multiple items efficiently:
 # Prepare batch data
 evaluations = [
     {
-        "response": "Python uses indentation for code blocks.",
+        "content": "Python uses indentation for code blocks.",
         "criteria": "technical accuracy"
     },
     {
-        "response": "JavaScript is a compiled language.",
+        "content": "JavaScript is a compiled language.",
         "criteria": "technical accuracy"
     },
     {
-        "response": "HTML is a programming language.",
+        "content": "HTML is a programming language.",
         "criteria": "technical accuracy"
     }
 ]
@@ -208,7 +208,7 @@ result = await client.evaluate(
 curl -X POST http://localhost:8080/evaluate \
     -H "Content-Type: application/json" \
     -d '{
-    "response": "This is a test response.",
+    "content": "This is a test response.",
     "criteria": "clarity and coherence",
     "scale": [1, 10]
     }'
@@ -221,7 +221,7 @@ const response = await fetch('http://localhost:8080/evaluate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-        response: "This is a test response.",
+        content: "This is a test content.",
         criteria: "clarity and coherence",
         scale: [1, 10]
     })

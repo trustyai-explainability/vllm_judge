@@ -36,9 +36,9 @@ result = await judge.evaluate(
 
 **What happens behind the scenes:**
 
-- Judge creates a prompt asking to evaluate the response based on your criteria
+- Judge creates a prompt asking to evaluate the content based on your criteria
 
-- The LLM provides a score (typically 1-10) and reasoning
+- The LLM provides a score (if scale is provided) and reasoning
 
 - You get a structured result with `decision`, `reasoning`, and `score`
 
@@ -110,7 +110,6 @@ result = await judge.evaluate(
     },
     criteria="clarity and informativeness"
 )
-# Result: decision="response_a" or "response_b"
 
 # With additional context
 result = await judge.evaluate(
@@ -149,12 +148,12 @@ result = await judge.evaluate(
     scale=(1, 10),
     examples=[
         {
-            "response": "This doesn't work. Fix it.",
+            "content": "This doesn't work. Fix it.",
             "score": 2,
             "reasoning": "Too vague and dismissive"
         },
         {
-            "response": "Line 5 has a syntax error. Try adding a closing parenthesis.",
+            "content": "Line 5 has a syntax error. Try adding a closing parenthesis.",
             "score": 8,
             "reasoning": "Specific, actionable, and helpful"
         }
@@ -337,11 +336,13 @@ async def comprehensive_evaluation(content: str):
 
 - Add system prompt to control the persona.
 
-- Try to provide context when the evaluation depends on understanding the situation or question that prompted the response.
+- Try to provide context when the evaluation depends on understanding the situation
+
+- Try to provide input that generated the content being evaluated.
 
 ## Next Steps
 
-- Learn about [Using Pre-built Metrics](metrics.md) for common evaluation tasks
+- Learn about [Using Metrics](metrics.md) for common evaluation tasks
 
 - Explore [Template Variables](templates.md) for dynamic evaluations
 

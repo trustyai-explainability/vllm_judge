@@ -554,6 +554,7 @@ criteria = "Evaluate this {response_type}"  # Will fail
 ```python
 # Using Jinja2 syntax with format engine
 result = await judge.evaluate(
+    content="..."
     criteria="{% if condition %}...{% endif %}",  # Jinja2 syntax
     template_engine="format"  # Wrong engine!
 )
@@ -615,12 +616,12 @@ for item in items_to_evaluate:
 # Prepare batch with templates
 batch_data = [
     {
-        "response": doc1,
+        "content": doc1,
         "criteria": "Evaluate {doc_type} quality",
         "template_vars": {"doc_type": "report"}
     },
     {
-        "response": doc2,
+        "content": doc2,
         "criteria": "Evaluate {doc_type} quality",
         "template_vars": {"doc_type": "proposal"}
     }

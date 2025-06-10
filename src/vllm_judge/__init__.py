@@ -24,10 +24,11 @@ from vllm_judge.metrics import (
     CLARITY,
     CONCISENESS,
     RELEVANCE,
-    
+    COHERENCE,
     # Safety metrics
     SAFETY,
     TOXICITY,
+    BIAS_DETECTION,
     LLAMA_GUARD_3_SAFETY,
     
     # Code metrics
@@ -61,6 +62,12 @@ from vllm_judge.metrics import (
     PRODUCT_REVIEW_TEMPLATE,
     MEDICAL_INFO_TEMPLATE,
     API_DOCS_TEMPLATE,
+    RAG_EVALUATION_TEMPLATE,
+    AGENT_PERFORMANCE_TEMPLATE,
+
+    # NLP metrics
+    TRANSLATION_QUALITY,
+    SUMMARIZATION_QUALITY,
 
 )
 from vllm_judge.exceptions import (
@@ -91,8 +98,10 @@ __all__ = [
     "CLARITY",
     "CONCISENESS",
     "RELEVANCE",
+    "COHERENCE",
     "SAFETY",
     "TOXICITY",
+    "BIAS_DETECTION",
     "LLAMA_GUARD_3_SAFETY",
     "CODE_QUALITY",
     "CODE_SECURITY",
@@ -112,6 +121,11 @@ __all__ = [
     "PRODUCT_REVIEW_TEMPLATE",
     "MEDICAL_INFO_TEMPLATE",
     "API_DOCS_TEMPLATE",
+    "RAG_EVALUATION_TEMPLATE",
+    "AGENT_PERFORMANCE_TEMPLATE",
+    "TRANSLATION_QUALITY",
+    "SUMMARIZATION_QUALITY",
+
     # Exceptions
     "VLLMJudgeError",
     "ConfigurationError",
