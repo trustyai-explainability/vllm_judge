@@ -1,7 +1,3 @@
-"""
-FastAPI server for vLLM Judge API.
-"""
-import asyncio
 import time
 import uuid
 from datetime import datetime
@@ -14,7 +10,7 @@ import uvicorn
 
 from vllm_judge.judge import Judge
 from vllm_judge.models import EvaluationResult, JudgeConfig
-from vllm_judge.metrics import BUILTIN_METRICS
+from vllm_judge.builtin_metrics import BUILTIN_METRICS
 from vllm_judge.exceptions import VLLMJudgeError
 from vllm_judge.api.models import (
     EvaluateRequest,

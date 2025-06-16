@@ -1,6 +1,3 @@
-"""
-HTTP client for vLLM Judge API.
-"""
 import asyncio
 from typing import Union, Dict, List, Optional, Tuple, Any, AsyncIterator
 import httpx

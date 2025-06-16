@@ -1,6 +1,3 @@
-"""
-API module for vLLM Judge.
-"""
 from vllm_judge.api.server import app, create_app, start_server
 from vllm_judge.api.client import JudgeClient
 from vllm_judge.api.models import (

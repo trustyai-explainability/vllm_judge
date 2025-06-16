@@ -17,7 +17,8 @@ class BatchProcessor:
             max_concurrent: Maximum concurrent requests
         """
         self.judge = judge
-        self.semaphore = asyncio.Semaphore(max_concurrent)
+        self.max_concurrent = max_concurrent
+        self.semaphore = asyncio.Semaphore(self.max_concurrent)
         self.progress_lock = asyncio.Lock()
         self.completed = 0
     

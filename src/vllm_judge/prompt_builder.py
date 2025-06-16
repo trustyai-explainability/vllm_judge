@@ -1,5 +1,5 @@
 from typing import List, Dict, Union, Optional, Tuple, Any
-
+import json
 
 class PromptBuilder:
     """Builds prompts for evaluation requests."""
@@ -35,24 +35,36 @@ class PromptBuilder:
         """
         # Detect evaluation type
         is_comparison = isinstance(content, dict) and "a" in content and "b" in content
+
+        output_format = """
+# Output Format:
+
+The JSON object MUST have exactly these three fields:
+
+1. decision: (String | Boolean) This decision label should clearly state your main finding. This could be a string representing a specific class (eg., PASS, FAIL, CORRECT, INCORRECT, etc.) or a boolean value (true or false). If user provided a rubric, you should use the rubric to determine the decision label.
+2. score: (Number | null) A numerical score for the evaluation. If scoring is requested, provide the score as a number. If scoring is NOT requested or is not applicable for the specific task, you MUST use the value null for this field.
+3. reasoning: (String) A concise explanation justifying your decision and score (if a score was provided). This reasoning must directly and logically support your evaluation and refer to the specific evaluation criteria.
+
+The JSON object MUST be well-formed and adhere strictly to the following structure:
+
+{
+    "decision": <your judgment - string|boolean>,
+    "reasoning": <concise explanation of your judgment - string>,
+    "score": <numeric score if requested, otherwise null - number|null>
+}
+        """
         
         # System message
         if not system_prompt:
-            # TODO: Add more detailed system prompts
-            system_prompt = "You are an impartial judge and expert evaluator "
-            if is_comparison:
-                system_prompt+="comparing responses objectively."
-            else:
-                system_prompt+="providing objective assessments."
-        
-        # Output format instructions
-        system_prompt+="\nYou must respond in JSON format:\n"
-        system_prompt+="""{
-    "decision": <your judgment - string|boolean>,
-    "reasoning": "<concise explanation of your judgment>",
-    "score": <numeric score if requested, otherwise null>
-}"""
-        system_prompt+="\nDo not include any text in your response except for the JSON object."
+            system_prompt = """You are an impartial judge and expert evaluator. Your task is to evaluate the provided content based on the specific evaluation criteria and rubric.
+# Key Instructions:
+1. Your evaluation must be objective, consistent, and based solely on the specified criteria. Do not let your own opinions or biases interfere.
+2. Focus exclusively on quality assessment. 
+3. Do not be influenced by the length of the responses unless response length is explicitly relevant to the specified evaluation criteria (e.g., a task assessing conciseness or verbosity).
+4. Your entire response MUST be a single, valid JSON object and nothing else. Do not include any text or conversational filler before or after this JSON object.
+
+"""
+        system_prompt += output_format
         
         # Build user message
         user_content = PromptBuilder._build_user_prompt(
@@ -93,30 +105,30 @@ class PromptBuilder:
             parts.append(f'"{input}"')
             parts.append("")
         
+        parts.append("## Content to evaluate:")
+        if is_comparison:
+            parts.append(f"**Response A:**\n{content['a']}")
+            parts.append(f"**Response B:**\n{content['b']}")
+        else:
+            parts.append(content)
+        
+        parts.append("## Evaluation Criteria:")
+        
         # Task description
         if is_comparison:
-            if input:
-                parts.append(f"Compare how well these two responses address the input for: {criteria}")
-            else:
-                parts.append(f"Compare these two responses based on: {criteria}")
+            parts.append(f"Compare the two responses based on: {criteria}")
             if context:
                 parts.append(f"\nContext: {context}")
-            parts.append(f"\nResponse A:\n{content['a']}")
-            parts.append(f"\nResponse B:\n{content['b']}")
         else:
-            if input:
-                parts.append(f"Evaluate how well this content addresses the input for: {criteria}")
-            else:
-                parts.append(f"Evaluate the following content based on: {criteria}")
+            parts.append(f"Evaluate the content based on: {criteria}")
             if context:
                 parts.append(f"\nContext: {context}")
-            parts.append(f"\nContent to evaluate:\n{content}")
         
-        parts.append(f"\nYou must return a decision label/class (your judgement) for the `decision` field and a concise explanation for the `reasoning` field.")
+        parts.append(f"\nYou must return a decision label/class (your main judgement) for the `decision` field and a concise explanation for the `reasoning` field in the JSON object.")
 
         # Add scale and rubric
         if scale:
-            parts.append(f"\nIn addition to these, provide a score from {scale[0]} to {scale[1]}")
+            parts.append(f"In addition to these, provide a score from {scale[0]} to {scale[1]}")
             
             if isinstance(rubric, dict):
                 parts.append("\nScoring guide:")
@@ -127,14 +139,15 @@ class PromptBuilder:
             elif rubric:
                 parts.append(f"\nEvaluation guide: {rubric}")
         elif rubric:
+            parts.append("\nIn addition to these, provide a score if required by the following evaluation guide.")
             parts.append(f"\nEvaluation guide: {rubric}")
         
         # Add examples if provided
         if examples:
             parts.append("\nExample evaluations:")
-            for i, ex in enumerate(examples, 1):
-                parts.append(f"\nExample {i}:")
-                
+            for i, ex in enumerate(examples):
+                parts.append(f"Example {i+1}:")
+                parts.append("Request:")
                 # Handle different example formats
                 if "input" in ex:
                     parts.append(f"Input: {ex['input']}")
@@ -143,17 +156,24 @@ class PromptBuilder:
                 elif "text" in ex:
                     parts.append(f"Text: {ex['text']}")
                 
-                if "decision" in ex:
-                    parts.append(f"Decision: {ex['decision']}")
+                parts.append("Response:")
+                
+                response = {}
+                if "decision" not in ex or ex["decision"] is None or ex["decision"] == "":
+                    raise ValueError("Example must include a decision field")
+                
+                response["decision"] = ex["decision"]
                 if "score" in ex:
-                    parts.append(f"Score: {ex['score']}")
+                    response["score"] = ex["score"]
                 
                 if "reasoning" in ex:
-                    parts.append(f"Reasoning: {ex['reasoning']}")
+                    response["reasoning"] = ex["reasoning"]
+                
+                parts.append(json.dumps(response))
         
         # Add any additional instructions
         if kwargs.get("additional_instructions"):
-            parts.append(f"\nAdditional instructions: {kwargs['additional_instructions']}")
+            parts.append(f"Additional instructions: {kwargs['additional_instructions']}")
 
         # Output format instructions
         parts.append("\nYou must respond in JSON format:")

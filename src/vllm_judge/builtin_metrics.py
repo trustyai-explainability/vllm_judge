@@ -1,6 +1,6 @@
 from typing import Dict
 from vllm_judge.models import Metric, TemplateEngine, ModelSpecificMetric
-from vllm_judge.utils import parse_llama_guard_3
+from vllm_judge.parsers import parse_llama_guard_3
 
 # Registry for built-in metrics
 BUILTIN_METRICS: Dict[str, Metric] = {}

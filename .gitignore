@@ -166,7 +166,6 @@ cython_debug/
 .idea/.gitignore
 .idea/misc.xml
 .idea/modules.xml
-.idea/trustyai-service-v2.iml
 .idea/vcs.xml
 .idea/inspectionProfiles/profiles_settings.xml
 

@@ -126,12 +126,8 @@ class VLLMClient:
             "messages": messages,
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
-            # "top_p": self.config.top_p,
         }
-        
-        # # Request JSON response format if supported
-        # if self.config.temperature < 0.2:  # Only for low temperature
-        #     request_data["response_format"] = {"type": "json_object"}
+
         
         try:
             response = await self._request_with_retry(
@@ -172,7 +168,6 @@ class VLLMClient:
             "prompt": prompt,
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
-            # "top_p": self.config.top_p,
         }
         
         try:

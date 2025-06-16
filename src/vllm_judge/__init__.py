@@ -17,7 +17,7 @@ from vllm_judge.models import (
     ModelSpecificMetric
 )
 from vllm_judge.templating import TemplateProcessor
-from vllm_judge.metrics import (
+from vllm_judge.builtin_metrics import (
     # General metrics
     HELPFULNESS,
     ACCURACY,

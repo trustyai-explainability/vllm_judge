@@ -1,6 +1,3 @@
-"""
-Command-line interface for vLLM Judge.
-"""
 import asyncio
 import json
 import sys
@@ -8,10 +5,9 @@ from typing import Optional
 import click
 
 from vllm_judge import Judge
-from vllm_judge.models import JudgeConfig
 from vllm_judge.api.server import start_server as start_api_server
 from vllm_judge.api.client import JudgeClient
-from vllm_judge.metrics import BUILTIN_METRICS
+from vllm_judge.builtin_metrics import BUILTIN_METRICS
 
 
 @click.group()

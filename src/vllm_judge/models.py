@@ -59,7 +59,6 @@ class JudgeConfig(BaseModel):
     # Model parameters
     temperature: float = Field(0.0, description="Sampling temperature")
     max_tokens: int = Field(256, description="Maximum tokens in response")
-    # top_p: float = Field(0.95, description="Top-p sampling")
     
     # Batch settings
     max_concurrent: int = Field(50, description="Maximum concurrent requests")

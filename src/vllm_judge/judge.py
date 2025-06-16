@@ -4,9 +4,9 @@ from typing import Union, Dict, List, Optional, Tuple, Any, Callable
 
 from vllm_judge.models import JudgeConfig, EvaluationResult, Metric, BatchResult, TemplateEngine, ModelSpecificMetric
 from vllm_judge.client import VLLMClient
-from vllm_judge.prompts import PromptBuilder
+from vllm_judge.prompt_builder import PromptBuilder
 from vllm_judge.batch import BatchProcessor
-from vllm_judge.metrics import BUILTIN_METRICS
+from vllm_judge.builtin_metrics import BUILTIN_METRICS
 from vllm_judge.templating import TemplateProcessor
 from vllm_judge.exceptions import (
     ParseError,
