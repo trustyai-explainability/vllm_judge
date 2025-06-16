@@ -5,7 +5,7 @@ A lightweight library for evaluating text responses using self-hosted language m
 via vLLM's OpenAI-compatible API.
 """
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 from vllm_judge.judge import Judge
 from vllm_judge.models import (
