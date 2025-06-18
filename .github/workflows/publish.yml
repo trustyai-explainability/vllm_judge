@@ -1,10 +1,10 @@
-name: Publish to PyPi
+name: Publish to PyPI
 on:
   release:
     types: [published]
 jobs:
   pypi-publish:
-    name: upload release to PyPi
+    name: upload release to PyPI
     runs-on: ubuntu-latest
     environment:
       name: pypi
