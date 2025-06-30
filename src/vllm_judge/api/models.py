@@ -42,7 +42,9 @@ class EvaluateRequest(BaseModel):
     template_engine: Optional[str] = Field(
         None, description="Template engine to use ('format' or 'jinja2'), default is 'format'"
     )
-    
+    sampling_params: Optional[Dict[str, Any]] = Field(
+        None, description="Sampling parameters for vLLM"
+    )
     class Config:
         json_schema_extra = {
             "example": {
@@ -68,7 +70,9 @@ class BatchEvaluateRequest(BaseModel):
     default_metric: Optional[str] = Field(
         None, description="Default metric for all evaluations"
     )
-
+    sampling_params: Optional[Dict[str, Any]] = Field(
+        None, description="Sampling parameters for vLLM"
+    )
 
 class AsyncBatchRequest(BaseModel):
     """Request model for async batch evaluation."""
@@ -81,7 +85,9 @@ class AsyncBatchRequest(BaseModel):
     max_concurrent: Optional[int] = Field(
         None, description="Maximum concurrent requests"
     )
-
+    sampling_params: Optional[Dict[str, Any]] = Field(
+        None, description="Sampling parameters for vLLM"
+    )
 
 class EvaluationResponse(BaseModel):
     """Response model for evaluation results."""
