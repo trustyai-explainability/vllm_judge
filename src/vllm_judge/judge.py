@@ -63,7 +63,7 @@ class Judge:
     
     async def evaluate(
         self,
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         input: Optional[str] = None,
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
@@ -81,7 +81,7 @@ class Judge:
         Universal evaluation method that adapts to use case.
         
         Args:
-            content: String for single evaluation, dict {"a": ..., "b": ...} for comparison
+            content: String for single evaluation, list of dicts for conversation, dict {"a": ..., "b": ...} for comparison
             input: Optional input/question/prompt that the content is responding to
             criteria: What to evaluate for (can contain template variables)
             rubric: Instructions for evaluation, can be string or dict containing mapping of score to description (can contain template variables)
@@ -105,12 +105,24 @@ class Judge:
         """
         # Handle model-specific metrics
         if isinstance(metric, ModelSpecificMetric):
-            assert isinstance(content, str), "Model-specific metrics only support string content for now"
+            if isinstance(content, dict):
+                raise InvalidInputError("Model-specific metrics only support string and list of dicts as content for now")
+            
+            is_conversation = (
+                isinstance(content, list) and 
+                all(isinstance(msg, dict) and "role" in msg and "content" in msg for msg in content)
+            )
+            if isinstance(content, list) and not is_conversation:
+                raise InvalidInputError("Invalid content structure for conversation. Please provide a list of dicts with role and content fields.")
+            
+            # Skip ALL our formatting
+            if is_conversation:
+                messages = content
+            else:
+                messages = [{"role": "user", "content": content}]
 
             # logger.info(f"Evaluating model-specific metric {metric.name}.")
             logger.info(f"We assume you're using {metric.model_pattern} type model. If not, please do not use this metric and use a normal metric instead.")
-            # Skip ALL our formatting
-            messages = [{"role": "user", "content": content}]
             
             # vLLM applies model's chat template automatically
             llm_response:str = await self._call_model(messages, sampling_params, return_choices=False)
