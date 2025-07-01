@@ -3,7 +3,7 @@
 
 # vLLM Judge
 
-A lightweight library for LLM-as-a-Judge evaluations using vLLM hosted models. Evaluate LLM inputs & outputs at scale with just a few lines of code. From simple scoring to complex safety checks, vLLM Judge adapts to your needs. Please refer the [documentation](https://saichandrapandraju.github.io/vllm_judge/) for usage details.
+A lightweight library for LLM-as-a-Judge evaluations using vLLM hosted models. Evaluate LLM inputs & outputs at scale with just a few lines of code. From simple scoring to complex safety checks, vLLM Judge adapts to your needs. Please refer the [documentation](https://trustyai-explainability.github.io/vllm_judge/) for usage details.
 
 ## Features
 
