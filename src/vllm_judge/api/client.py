@@ -62,7 +62,7 @@ class JudgeClient:
     
     async def evaluate(
         self,
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         input: Optional[str] = None,
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,

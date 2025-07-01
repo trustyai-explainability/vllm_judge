@@ -5,10 +5,10 @@ from datetime import datetime
 
 class EvaluateRequest(BaseModel):
     """Request model for single evaluation."""
-    content: Union[str, Dict[str, str]] = Field(
+    content: Union[str, Dict[str, str], List[Dict[str, str]]] = Field(
         ..., 
-        description="Content to evaluate (string or dict with 'a'/'b' for comparison)",
-        examples=["This is a response", {"a": "Response A", "b": "Response B"}]
+        description="Content to evaluate (string or dict with 'a'/'b' for comparison, or list of dicts for conversation)",
+        examples=["This is a response", {"a": "Response A", "b": "Response B"}, [{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there!"}]]
     )
     input: Optional[str] = Field(
         None,
