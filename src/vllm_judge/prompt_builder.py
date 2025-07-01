@@ -1,12 +1,14 @@
 from typing import List, Dict, Union, Optional, Tuple, Any
 import json
 
+from vllm_judge.exceptions import InvalidInputError
+
 class PromptBuilder:
     """Builds prompts for evaluation requests."""
     
     @staticmethod
     def build_messages(
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         criteria: str,
         input: Optional[str] = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
@@ -20,7 +22,7 @@ class PromptBuilder:
         Build chat messages for evaluation.
         
         Args:
-            content: Single response or dict with 'a' and 'b' for comparison
+            content: Single response or dict with 'a' and 'b' for comparison, or list of dicts for conversation
             criteria: What to evaluate for
             input: Optional input/question/prompt that the response addresses
             rubric: Evaluation guide
@@ -35,7 +37,16 @@ class PromptBuilder:
         """
         # Detect evaluation type
         is_comparison = isinstance(content, dict) and "a" in content and "b" in content
-
+        if isinstance(content, list) and len(content) == 0:
+                raise InvalidInputError("Conversation content cannot be an empty list.")
+        is_conversation = isinstance(content, list) and all(
+            isinstance(msg, dict) and "role" in msg and "content" in msg
+            for msg in content
+        )
+        if isinstance(content, list) and not is_conversation:
+            raise InvalidInputError(
+                "Invalid content structure for conversation. Please provide a list of dicts with role and content fields."
+            )
         output_format = """
 # Output Format:
 
@@ -75,6 +86,7 @@ The JSON object MUST be well-formed and adhere strictly to the following structu
             scale=scale,
             examples=examples,
             is_comparison=is_comparison,
+            is_conversation=is_conversation,
             context=context,
             **kwargs
         )
@@ -86,12 +98,13 @@ The JSON object MUST be well-formed and adhere strictly to the following structu
     
     @staticmethod
     def _build_user_prompt(
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         criteria: str,
         rubric: Union[str, Dict[Union[int, float], str]],
         scale: Optional[Tuple[int, int]],
         examples: List[Dict[str, Any]],
         is_comparison: bool,
+        is_conversation: bool,
         context: Optional[str] = None,
         input: Optional[str] = None,
         **kwargs
@@ -109,6 +122,14 @@ The JSON object MUST be well-formed and adhere strictly to the following structu
         if is_comparison:
             parts.append(f"**Response A:**\n{content['a']}")
             parts.append(f"**Response B:**\n{content['b']}")
+        elif is_conversation:
+            parts.append("**Conversation Start:**")
+            for i, msg in enumerate(content):
+                role = msg["role"].title() 
+                parts.append(f"{role}: {msg['content']}")
+                if i < len(content) - 1:  # Add spacing except for last message
+                    parts.append("")
+            parts.append("**Conversation End:**")
         else:
             parts.append(content)
         
@@ -117,6 +138,11 @@ The JSON object MUST be well-formed and adhere strictly to the following structu
         # Task description
         if is_comparison:
             parts.append(f"Compare the two responses based on: {criteria}")
+            if context:
+                parts.append(f"\nContext: {context}")
+        elif is_conversation:
+            parts.append(f"Evaluate the conversation based on: {criteria}")
+            parts.append("Consider the full context, flow, and interaction quality.")
             if context:
                 parts.append(f"\nContext: {context}")
         else:
@@ -152,7 +178,14 @@ The JSON object MUST be well-formed and adhere strictly to the following structu
                 if "input" in ex:
                     parts.append(f"Input: {ex['input']}")
                 if "content" in ex:
-                    parts.append(f"Content: {ex['content']}")
+                    if isinstance(ex["content"], list):
+                        parts.append("**Conversation Start:**")
+                        for msg in ex["content"]:
+                            role = msg["role"].title()
+                            parts.append(f"{role}: {msg['content']}")
+                        parts.append("**Conversation End:**")
+                    else:
+                        parts.append(f"Content: {ex['content']}")
                 elif "text" in ex:
                     parts.append(f"Text: {ex['text']}")
                 
