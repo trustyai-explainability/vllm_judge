@@ -103,6 +103,9 @@ class Judge:
             MetricNotFoundError: If metric name not found
             ParseError: If unable to parse model response
         """
+        if metric and isinstance(metric, str):
+            metric: Metric = self.get_metric(metric)
+
         # Handle model-specific metrics
         if isinstance(metric, ModelSpecificMetric):
             if isinstance(content, dict):
@@ -139,8 +142,6 @@ class Judge:
         metric_template_vars = {}
         
         if metric:
-            if isinstance(metric, str):
-                metric = self.get_metric(metric)
             # Use metric defaults but allow overrides
             criteria = criteria or metric.criteria
             rubric = rubric or metric.rubric
