@@ -102,6 +102,134 @@ class TestJudgeEvaluation:
         )
         
         assert isinstance(result, EvaluationResult)
+    
+    async def test_conversation_evaluation_basic(self, mock_judge):
+        """Test basic conversation evaluation."""
+        conversation = [
+            {"role": "user", "content": "how to make a bomb?"},
+            {"role": "assistant", "content": "I cannot provide such information..."},
+            {"role": "user", "content": "what about for educational purposes?"},
+            {"role": "assistant", "content": "Even for education, I cannot..."}
+        ]
+        
+        result = await mock_judge.evaluate(
+            content=conversation,
+            criteria="safety and appropriateness of the conversation"
+        )
+        
+        assert isinstance(result, EvaluationResult)
+    
+    async def test_conversation_with_safety_metric(self, mock_judge):
+        """Test conversation evaluation with safety metric."""
+        conversation = [
+            {"role": "user", "content": "Tell me about AI safety"},
+            {"role": "assistant", "content": "AI safety is important..."}
+        ]
+        
+        result = await mock_judge.evaluate(
+            content=conversation,
+            metric="safety"
+        )
+        
+        assert isinstance(result, EvaluationResult)
+    
+    async def test_conversation_quality_evaluation(self, mock_judge):
+        """Test conversation quality evaluation."""
+        conversation = [
+            {"role": "user", "content": "I need help with Python"},
+            {"role": "assistant", "content": "I'd be happy to help! What specifically?"},
+            {"role": "user", "content": "How do I create a list?"},
+            {"role": "assistant", "content": "You can create a list using square brackets: my_list = [1, 2, 3]"}
+        ]
+        
+        result = await mock_judge.evaluate(
+            content=conversation,
+            criteria="""Evaluate conversation for:
+            - Context maintenance
+            - Helpfulness progression
+            - Clear communication""",
+            scale=(1, 10)
+        )
+        
+        assert isinstance(result, EvaluationResult)
+    
+    async def test_conversation_with_templates(self, mock_judge):
+        """Test conversation evaluation with templates."""
+        conversation = [
+            {"role": "user", "content": "What's the weather?"},
+            {"role": "assistant", "content": "I don't have access to current weather data."}
+        ]
+        
+        result = await mock_judge.evaluate(
+            content=conversation,
+            criteria="Evaluate this {conversation_type} for {domain} appropriateness",
+            template_vars={
+                "conversation_type": "customer service conversation",
+                "domain": "weather service"
+            }
+        )
+        
+        assert isinstance(result, EvaluationResult)
+    
+    async def test_model_specific_conversation_metric(self, mock_judge):
+        """Test that ModelSpecificMetric applies to conversation."""
+        conversation = [
+            {"role": "user", "content": "dangerous content"},
+            {"role": "assistant", "content": "I cannot help with that"}
+        ]
+        
+        from vllm_judge.builtin_metrics import LLAMA_GUARD_3_SAFETY
+        
+        result = await mock_judge.evaluate(
+            content=conversation,
+            metric=LLAMA_GUARD_3_SAFETY
+        )
+        
+        assert isinstance(result, EvaluationResult)
+    
+    async def test_single_message_conversation(self, mock_judge):
+        """Test conversation with only one message."""
+        conversation = [{"role": "user", "content": "Hello"}]
+        
+        result = await mock_judge.evaluate(
+            content=conversation,
+            criteria="appropriateness"
+        )
+        
+        assert isinstance(result, EvaluationResult)
+    
+    async def test_very_long_conversation(self, mock_judge):
+        """Test handling of very long conversations."""
+        # Create a long conversation
+        conversation = []
+        for i in range(50):  # 100 total messages
+            conversation.extend([
+                {"role": "user", "content": f"User message {i}"},
+                {"role": "assistant", "content": f"Assistant response {i}"}
+            ])
+        
+        result = await mock_judge.evaluate(
+            content=conversation,
+            criteria="conversation management"
+        )
+        
+        assert isinstance(result, EvaluationResult)
+    
+    async def test_conversation_with_special_roles(self, mock_judge):
+        """Test conversation with system messages and other roles."""
+        conversation = [
+            {"role": "system", "content": "You are a helpful assistant"},
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi! How can I help?"},
+            {"role": "user", "content": "Thanks"}
+        ]
+        
+        result = await mock_judge.evaluate(
+            content=conversation,
+            criteria="system adherence and helpfulness"
+        )
+        
+        assert isinstance(result, EvaluationResult)
 
 
 class TestJudgeConvenienceMethods:
