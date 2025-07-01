@@ -1,8 +1,8 @@
 site_name: vLLM Judge
 site_description: LLM-as-a-Judge evaluations for vLLM hosted models
 site_author: Sai Chandra Pandraju
-site_url: https://saichandrapandraju.github.io/vllm-judge
-repo_url: https://github.com/saichandrapandraju/vllm-judge
+site_url: https://trustyai.org/vllm_judge/
+repo_url: https://github.com/trustyai-explainability/vllm_judge
 
 
 theme:
