@@ -52,6 +52,98 @@ class TestJudgeConfig:
         # With explicit model
         config = JudgeConfig.from_url("http://localhost:8000", model="explicit-model")
         assert config.model == "explicit-model"
+    
+    def test_default_sampling_params(self):
+        """Test default sampling parameters are set correctly."""
+        config = JudgeConfig(
+            base_url="http://localhost:8000",
+            model="test-model"
+        )
+        
+        assert "sampling_params" in config.model_dump()
+        assert config.sampling_params["temperature"] == 0.0
+        assert config.sampling_params["max_tokens"] == 256
+    
+    def test_custom_sampling_params(self):
+        """Test custom sampling parameters."""
+        custom_params = {
+            "temperature": 0.7,
+            "max_tokens": 512,
+            "top_p": 0.9,
+            "top_k": 50,
+            "frequency_penalty": 0.1
+        }
+        
+        config = JudgeConfig(
+            base_url="http://localhost:8000",
+            model="test-model",
+            sampling_params=custom_params
+        )
+        
+        assert config.sampling_params == custom_params
+        assert config.sampling_params["temperature"] == 0.7
+        assert config.sampling_params["top_p"] == 0.9
+    
+    def test_partial_sampling_params_override(self):
+        """Test partial override of default sampling parameters."""
+        config = JudgeConfig(
+            base_url="http://localhost:8000",
+            model="test-model",
+            sampling_params={"temperature": 0.8}  # Only override temperature
+        )
+        
+        # Should only have what we explicitly set
+        assert config.sampling_params["temperature"] == 0.8
+        assert len(config.sampling_params) == 1  # Only temperature
+    
+    def test_from_url_with_sampling_params(self, monkeypatch):
+        """Test from_url with custom sampling parameters."""
+        monkeypatch.setattr(
+            "vllm_judge.client.detect_model_sync", 
+            lambda url: "detected-model"
+        )
+        
+        custom_params = {
+            "temperature": 1.0,
+            "max_tokens": 1024,
+            "repetition_penalty": 1.1
+        }
+        
+        config = JudgeConfig.from_url(
+            "http://localhost:8000",
+            sampling_params=custom_params
+        )
+        
+        assert config.sampling_params == custom_params
+        assert config.model == "detected-model"
+    
+    def test_empty_sampling_params(self):
+        """Test empty sampling parameters."""
+        config = JudgeConfig(
+            base_url="http://localhost:8000",
+            model="test-model",
+            sampling_params={}
+        )
+        
+        assert config.sampling_params == {}
+    
+    def test_sampling_params_validation(self):
+        """Test sampling parameters type validation."""
+        # Should accept dict
+        config = JudgeConfig(
+            base_url="http://localhost:8000",
+            model="test-model",
+            sampling_params={"temperature": 0.5}
+        )
+        assert isinstance(config.sampling_params, dict)
+        
+        # Invalid types should be caught by Pydantic
+        with pytest.raises(ValueError):
+            JudgeConfig(
+                base_url="http://localhost:8000",
+                model="test-model",
+                sampling_params="invalid"  # Should be dict
+            )
 
 
 class TestEvaluationResult:

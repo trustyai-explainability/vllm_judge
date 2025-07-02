@@ -26,6 +26,7 @@ class BatchProcessor:
         self,
         data: List[Dict[str, Any]],
         progress_callback: Optional[Callable[[int, int], None]] = None,
+        sampling_params: Optional[Dict[str, Any]] = None,
         **default_kwargs
     ) -> BatchResult:
         """
@@ -53,7 +54,8 @@ class BatchProcessor:
                 eval_kwargs,
                 i,
                 total,
-                progress_callback
+                progress_callback,
+                sampling_params
             )
             tasks.append(task)
         
@@ -78,7 +80,8 @@ class BatchProcessor:
         eval_kwargs: Dict[str, Any],
         index: int,
         total: int,
-        progress_callback: Optional[Callable]
+        progress_callback: Optional[Callable],
+        sampling_params: Optional[Dict[str, Any]]
     ) -> Union[EvaluationResult, Exception]:
         """Process single item with concurrency control."""
         async with self.semaphore:
@@ -89,7 +92,7 @@ class BatchProcessor:
                     raise ValueError(f"Item {index} missing 'content' field")
                 
                 # Perform evaluation
-                result = await self.judge.evaluate(content=content, **eval_kwargs)
+                result = await self.judge.evaluate(content=content, sampling_params=sampling_params, **eval_kwargs)
                 
                 # Update progress
                 async with self.progress_lock:
@@ -118,6 +121,7 @@ class BatchProcessor:
         self,
         data: List[Dict[str, Any]],
         callback: Callable[[int, Union[EvaluationResult, Exception]], None],
+        sampling_params: Optional[Dict[str, Any]] = None,
         **default_kwargs
     ):
         """
@@ -133,7 +137,8 @@ class BatchProcessor:
                 {**default_kwargs, **item},
                 index,
                 len(data),
-                None
+                None,
+                sampling_params
             )
             callback(index, result)
             return result

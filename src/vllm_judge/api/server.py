@@ -115,7 +115,8 @@ async def evaluate(request: EvaluateRequest):
             system_prompt=request.system_prompt,
             examples=request.examples,
             template_vars=request.template_vars,
-            template_engine=request.template_engine
+            template_engine=request.template_engine,
+            sampling_params=request.sampling_params
         )
         
         # Convert to response model
@@ -158,7 +159,8 @@ async def batch_evaluate(request: BatchEvaluateRequest):
         # Perform batch evaluation
         batch_result = await judge.batch_evaluate(
             data=request.data,
-            max_concurrent=request.max_concurrent
+            max_concurrent=request.max_concurrent,
+            sampling_params=request.sampling_params
         )
         
         # Convert results
@@ -227,7 +229,8 @@ async def async_batch_evaluate(
         job_id,
         request.data,
         request.max_concurrent,
-        request.callback_url
+        request.callback_url,
+        request.sampling_params
     )
     
     return AsyncBatchResponse(
@@ -243,7 +246,8 @@ async def run_async_batch(
     job_id: str,
     data: List[Dict[str, Any]],
     max_concurrent: Optional[int],
-    callback_url: Optional[str]
+    callback_url: Optional[str],
+    sampling_params: Optional[Dict[str, Any]]
 ):
     """Run batch evaluation in background."""
     global total_evaluations
@@ -261,7 +265,8 @@ async def run_async_batch(
         batch_result = await judge.batch_evaluate(
             data=data,
             max_concurrent=max_concurrent,
-            progress_callback=update_progress
+            progress_callback=update_progress,
+            sampling_params=sampling_params
         )
         
         # Update job
@@ -429,7 +434,8 @@ async def websocket_evaluate(websocket: WebSocket):
                     system_prompt=request.system_prompt,
                     examples=request.examples,
                     template_vars=request.template_vars,
-                    template_engine=request.template_engine
+                    template_engine=request.template_engine,
+                    sampling_params=request.sampling_params
                 )
                 
                 # Send result

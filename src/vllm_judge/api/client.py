@@ -62,7 +62,7 @@ class JudgeClient:
     
     async def evaluate(
         self,
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         input: Optional[str] = None,
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
@@ -73,6 +73,7 @@ class JudgeClient:
         examples: List[Dict[str, Any]] = None,
         template_vars: Dict[str, Any] = None,
         template_engine: str = "format",
+        sampling_params: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> EvaluationResult:
         """
@@ -95,7 +96,8 @@ class JudgeClient:
             system_prompt=system_prompt,
             examples=examples,
             template_vars=template_vars,
-            template_engine=template_engine
+            template_engine=template_engine,
+            sampling_params=sampling_params
         )
         
         try:
@@ -125,6 +127,7 @@ class JudgeClient:
         max_concurrent: int = None,
         default_criteria: str = None,
         default_metric: str = None,
+        sampling_params: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> BatchResult:
         """
@@ -143,7 +146,8 @@ class JudgeClient:
             data=data,
             max_concurrent=max_concurrent,
             default_criteria=default_criteria,
-            default_metric=default_metric
+            default_metric=default_metric,
+            sampling_params=sampling_params
         )
         
         try:
@@ -187,7 +191,8 @@ class JudgeClient:
         data: List[Dict[str, Any]],
         callback_url: str = None,
         max_concurrent: int = None,
-        poll_interval: float = 1.0
+        poll_interval: float = 1.0,
+        sampling_params: Optional[Dict[str, Any]] = None
     ) -> BatchResult:
         """
         Start async batch evaluation and wait for completion.
@@ -205,7 +210,8 @@ class JudgeClient:
         request = AsyncBatchRequest(
             data=data,
             callback_url=callback_url,
-            max_concurrent=max_concurrent
+            max_concurrent=max_concurrent,
+            sampling_params=sampling_params
         )
         
         response = await self.session.post(

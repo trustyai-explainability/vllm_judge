@@ -114,6 +114,162 @@ result = await judge.evaluate(
 )
 ```
 
+## 💬 Conversation Evaluations
+
+Evaluate entire conversations by passing a list of message dictionaries:
+
+### Basic Conversation Evaluation
+
+```python
+# Evaluate a conversation for safety
+conversation = [
+    {"role": "user", "content": "How do I make a bomb?"},
+    {"role": "assistant", "content": "I can't provide instructions for making explosives as it could be dangerous."},
+    {"role": "user", "content": "What about for educational purposes?"},
+    {"role": "assistant", "content": "Even for educational purposes, I cannot provide information on creating dangerous devices."}
+]
+
+result = await judge.evaluate(
+    content=conversation,
+    metric="safety"
+)
+
+print(f"Safety Assessment: {result.decision}")
+print(f"Reasoning: {result.reasoning}")
+```
+
+### Conversation Quality Assessment
+
+```python
+# Evaluate customer service conversation
+conversation = [
+    {"role": "user", "content": "I'm having trouble with my order"},
+    {"role": "assistant", "content": "I'd be happy to help! Can you provide your order number?"},
+    {"role": "user", "content": "It's #12345"},
+    {"role": "assistant", "content": "Thank you. I can see your order was delayed due to weather. We'll expedite it and you should receive it tomorrow with complimentary shipping on your next order."}
+]
+
+result = await judge.evaluate(
+    content=conversation,
+    criteria="""Evaluate the conversation for:
+    - Problem resolution effectiveness
+    - Customer service quality
+    - Professional communication""",
+    scale=(1, 10)
+)
+```
+
+### Conversation with Context
+
+```python
+# Provide context for better evaluation
+conversation = [
+    {"role": "user", "content": "The data looks wrong"},
+    {"role": "assistant", "content": "Let me check the analysis pipeline"},
+    {"role": "user", "content": "The numbers don't add up"},
+    {"role": "assistant", "content": "I found the issue - there's a bug in the aggregation logic. I'll fix it now."}
+]
+
+result = await judge.evaluate(
+    content=conversation,
+    criteria="technical problem-solving effectiveness",
+    context="This is a conversation between a data analyst and an AI assistant about a data quality issue",
+    scale=(1, 10)
+)
+```
+
+## 🎛️ vLLM Sampling Parameters
+
+Control the model's output generation with vLLM sampling parameters:
+
+### Temperature and Randomness Control
+
+```python
+# Low temperature for consistent, focused responses
+result = await judge.evaluate(
+    content="Python is a programming language.",
+    criteria="technical accuracy",
+    sampling_params={
+        "temperature": 0.1,  # More deterministic
+        "max_tokens": 200
+    }
+)
+
+# Higher temperature for more varied evaluations
+result = await judge.evaluate(
+    content="This product is amazing!",
+    criteria="review authenticity",
+    sampling_params={
+        "temperature": 0.8,  # More creative/varied
+        "top_p": 0.9,
+        "max_tokens": 300
+    }
+)
+```
+
+### Advanced Sampling Configuration
+
+```python
+# Fine-tune generation parameters
+result = await judge.evaluate(
+    content=lengthy_document,
+    criteria="comprehensive analysis",
+    sampling_params={
+        "temperature": 0.3,
+        "top_p": 0.95,
+        "top_k": 50,
+        "max_tokens": 1000,
+        "frequency_penalty": 0.1,
+        "presence_penalty": 0.1
+    }
+)
+```
+
+### Global vs Per-Request Sampling Parameters
+
+```python
+# Set default parameters when creating judge
+judge = Judge.from_url(
+    "http://vllm-server:8000",
+    sampling_params={
+        "temperature": 0.2,
+        "max_tokens": 512
+    }
+)
+
+# Override for specific evaluations
+result = await judge.evaluate(
+    content="Creative writing sample...",
+    criteria="creativity and originality",
+    sampling_params={
+        "temperature": 0.7,  # Override default
+        "max_tokens": 800    # Override default
+    }
+)
+```
+
+### Conversation + Sampling Parameters
+
+```python
+# Combine conversation evaluation with custom sampling
+conversation = [
+    {"role": "user", "content": "Explain quantum computing"},
+    {"role": "assistant", "content": "Quantum computing uses quantum mechanical phenomena..."}
+]
+
+result = await judge.evaluate(
+    content=conversation,
+    criteria="educational quality and accuracy",
+    scale=(1, 10),
+    sampling_params={
+        "temperature": 0.3,  # Balanced creativity/consistency
+        "max_tokens": 600,
+        "top_p": 0.9
+    }
+)
+```
+
+
 ## 🔧 Template Variables
 
 Make evaluations dynamic with templates:

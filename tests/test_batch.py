@@ -46,6 +46,37 @@ class TestBatchProcessor:
         for res in result.results:
             assert isinstance(res, EvaluationResult)
     
+    async def test_batch_conversation_evaluation(self, mock_judge):
+        """Test batch processing of conversations."""
+        processor = BatchProcessor(mock_judge, max_concurrent=2)
+
+        conversations = [
+            [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there!"}
+            ],
+            [
+                {"role": "user", "content": "How are you?"},
+                {"role": "assistant", "content": "I'm doing well, thanks!"}
+            ]
+        ]
+        
+        data = [
+            {"content": conv, "criteria": "conversation quality"}
+            for conv in conversations
+        ]
+        
+        result = await processor.process(data)
+        assert isinstance(result, BatchResult)
+        assert result.total == 2
+        assert result.successful == 2
+        assert result.failed == 0
+        assert len(result.results) == 2
+        
+        # Check that all results are EvaluationResult instances
+        for res in result.results:
+            assert isinstance(res, EvaluationResult)
+    
     async def test_batch_process_with_failures(self, mock_judge):
         """Test batch processing with some failures."""
         processor = BatchProcessor(mock_judge, max_concurrent=2)

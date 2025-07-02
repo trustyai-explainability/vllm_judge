@@ -63,7 +63,7 @@ class Judge:
     
     async def evaluate(
         self,
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         input: Optional[str] = None,
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
@@ -74,13 +74,14 @@ class Judge:
         context: str = None,
         template_vars: Dict[str, Any] = None,
         template_engine: Union[str, TemplateEngine] = TemplateEngine.FORMAT,
+        sampling_params: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> EvaluationResult:
         """
         Universal evaluation method that adapts to use case.
         
         Args:
-            content: String for single evaluation, dict {"a": ..., "b": ...} for comparison
+            content: String for single evaluation, list of dicts for conversation, dict {"a": ..., "b": ...} for comparison
             input: Optional input/question/prompt that the content is responding to
             criteria: What to evaluate for (can contain template variables)
             rubric: Instructions for evaluation, can be string or dict containing mapping of score to description (can contain template variables)
@@ -91,7 +92,8 @@ class Judge:
             context: Optional context for the evaluation
             template_vars: Variables to substitute in templates
             template_engine: Template engine to use ('format' or 'jinja2'), default is 'format'
-            **kwargs: Additional parameters
+            sampling_params: Optional sampling parameters for vLLM
+            **kwargs: Additional instructions for the model (e.g., with `additional_instructions` key)
             
         Returns:
             EvaluationResult with decision, reasoning, and optional score
@@ -101,17 +103,36 @@ class Judge:
             MetricNotFoundError: If metric name not found
             ParseError: If unable to parse model response
         """
+        if metric and isinstance(metric, str):
+            metric: Metric = self.get_metric(metric)
+
         # Handle model-specific metrics
         if isinstance(metric, ModelSpecificMetric):
-            assert isinstance(content, str), "Model-specific metrics only support string content for now"
+            if isinstance(content, dict):
+                raise InvalidInputError("Model-specific metrics only support string and list of dicts as content for now")
+            
+            if isinstance(content, list) and len(content) == 0:
+                raise InvalidInputError("Conversation content cannot be an empty list.")
+            
+            is_conversation = (
+                isinstance(content, list) and 
+                all(isinstance(msg, dict) and "role" in msg and "content" in msg for msg in content)
+            )
+            if isinstance(content, list) and not is_conversation:
+                raise InvalidInputError("Invalid content structure for conversation. Please provide a list of dicts with role and content fields.")
+            
+            
+            # Skip ALL our formatting
+            if is_conversation:
+                messages = content
+            else:
+                messages = [{"role": "user", "content": content}]
 
             # logger.info(f"Evaluating model-specific metric {metric.name}.")
             logger.info(f"We assume you're using {metric.model_pattern} type model. If not, please do not use this metric and use a normal metric instead.")
-            # Skip ALL our formatting
-            messages = [{"role": "user", "content": content}]
             
             # vLLM applies model's chat template automatically
-            llm_response = await self._call_model(messages)
+            llm_response:str = await self._call_model(messages, sampling_params, return_choices=False)
             
             # Use metric's parser
             return metric.parser_func(llm_response)
@@ -121,8 +142,6 @@ class Judge:
         metric_template_vars = {}
         
         if metric:
-            if isinstance(metric, str):
-                metric = self.get_metric(metric)
             # Use metric defaults but allow overrides
             criteria = criteria or metric.criteria
             rubric = rubric or metric.rubric
@@ -176,9 +195,9 @@ class Judge:
             **kwargs
         )
         
-        # Get LLM response
-        llm_response = await self._call_model(messages)
-        
+        # Get LLM response. We don't need choices for now.
+        llm_response:str = await self._call_model(messages, sampling_params, return_choices=False)
+
         # Parse response
         result = self._parse_response(llm_response)
         
@@ -189,16 +208,39 @@ class Judge:
         
         return result
     
-    async def _call_model(self, messages: List[Dict[str, str]]) -> str:
+    async def _call_model(self, messages: List[Dict[str, str]], 
+                          sampling_params: Optional[Dict[str, Any]] = None,
+                          return_choices: bool = False) -> Union[str, List[Dict[str, Any]]]:
         """
         Call the model with the given messages.
+
+        Args:
+            messages: List of messages
+            sampling_params: Sampling parameters
+            return_choices: Whether to return choices
+
+        Returns:
+            str model response if return_choices is False, otherwise List[Dict[str, Any]]
         """
+        if sampling_params and 'n' in sampling_params and sampling_params['n'] > 1:
+            raise InvalidInputError("n > 1 is not supported for now")
+        
+        # Merge sampling params
+        final_sampling_params = {**self.config.sampling_params}
+        if sampling_params:
+            final_sampling_params.update(sampling_params)
         try:
             if self.config.use_chat_api:
-                llm_response = await self.client.chat_completion(messages)
+                llm_response = await self.client.chat_completion(
+                    messages,
+                    sampling_params=final_sampling_params,
+                    return_choices=return_choices)
             else:
                 prompt = PromptBuilder.format_messages_as_text(messages)
-                llm_response = await self.client.completion(prompt)
+                llm_response = await self.client.completion(
+                    prompt,
+                    sampling_params=final_sampling_params,
+                    return_choices=return_choices)
             return llm_response
         except Exception as e:
             raise VLLMJudgeError(f"Failed to get model response: {e}")
@@ -436,6 +478,7 @@ class Judge:
         data: List[Dict[str, Any]],
         max_concurrent: int = None,
         progress_callback: Callable[[int, int], None] = None,
+        sampling_params: Optional[Dict[str, Any]] = None,
         **default_kwargs
     ) -> BatchResult:
         """
@@ -459,7 +502,7 @@ class Judge:
             ])
         """
         processor = BatchProcessor(self, max_concurrent or self.config.max_concurrent)
-        return await processor.process(data, progress_callback, **default_kwargs)
+        return await processor.process(data, progress_callback, sampling_params, **default_kwargs)
     
     async def batch_score(
         self,
