@@ -18,6 +18,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+DECISION_ALTERNATIVES = ["label", "judgment", "result", "output", "prediction", "response"]
+REASONING_ALTERNATIVES = ["reason", "explanation", "justification", "rationale", "thought", "thinking"]
+SCORE_ALTERNATIVES = ["confidence", "probability", "prob", "grade", "rating", "score_value", "value"]
+REQUIRED_FIELDS = ["decision", "reasoning"]
 
 class Judge:
     """Main class for LLM-as-a-Judge evaluations."""
@@ -130,9 +134,14 @@ class Judge:
 
             # logger.info(f"Evaluating model-specific metric {metric.name}.")
             logger.info(f"We assume you're using {metric.model_pattern} type model. If not, please do not use this metric and use a normal metric instead.")
+
+            if metric.sampling_params:
+                if sampling_params is None:
+                    sampling_params = {}
+                sampling_params.update(metric.sampling_params)
             
             # vLLM applies model's chat template automatically
-            llm_response:str = await self._call_model(messages, sampling_params, return_choices=False)
+            llm_response = await self._call_model(messages, sampling_params, return_choices=metric.return_choices)
             
             # Use metric's parser
             return metric.parser_func(llm_response)
@@ -250,6 +259,11 @@ class Judge:
         """
         Parse LLM response into EvaluationResult.
         
+        Uses multiple parsing strategies in order of preference:
+        1. Direct JSON parsing
+        2. JSON extraction from markdown code blocks  
+        3. Regex-based JSON structure detection
+        
         Args:
             response: Raw LLM response
             
@@ -257,47 +271,40 @@ class Judge:
             Parsed EvaluationResult
             
         Raises:
-            ParseError: If unable to parse response
+            ParseError: If unable to parse response or missing required fields
         """
-        # Try to parse as JSON
-        try:
-            # First attempt: direct JSON parsing
-            data = json.loads(response.strip())
-        except json.JSONDecodeError:
-            # Second attempt: extract JSON from markdown code blocks
-            json_match = re.search(r'```(?:json)?\s*({.*?})\s*```', response, re.DOTALL)
-            if json_match:
-                try:
-                    data = json.loads(json_match.group(1))
-                except json.JSONDecodeError:
-                    pass
-            else:
-                # Third attempt: find JSON-like structure
-                json_match = re.search(r'({[^{}]*"decision"[^{}]*})', response, re.DOTALL)
-                if json_match:
-                    try:
-                        data = json.loads(json_match.group(1))
-                    except json.JSONDecodeError:
-                        raise ParseError(
-                            "Failed to parse JSON from response",
-                            raw_response=response
-                        )
-                else:
-                    raise ParseError(
-                        "No JSON structure found in response",
-                        raw_response=response
-                    )
+        logger.debug(f"Parsing response: {response[:100]}...")
         
-        # Validate required fields
-        if "decision" not in data:
+        # Try each parsing strategy
+        parsing_strategies = [
+            ("direct JSON", self._parse_direct_json),
+            ("markdown JSON", self._parse_markdown_json), 
+            ("regex JSON", self._parse_regex_json)
+        ]
+        
+        data = None
+        for strategy_name, strategy_func in parsing_strategies:
+            data = strategy_func(response)
+            if data is not None:
+                logger.debug(f"Successfully parsed using {strategy_name}")
+                break
+        
+        if data is None:
             raise ParseError(
-                "Response missing required 'decision' field",
+                "Unable to extract valid JSON from response using any parsing strategy",
                 raw_response=response
             )
         
-        if "reasoning" not in data:
-            # Try to extract reasoning from other fields
-            data["reasoning"] = data.get("reason", data.get("explanation", "No reasoning provided"))
+        # Validate and normalize the data
+        try:
+            data = self._validate_and_normalize_data(data, response)
+        except ParseError:
+            raise  # Re-raise ParseError as-is
+        except Exception as e:
+            raise ParseError(
+                f"Data validation failed: {e}",
+                raw_response=response
+            )
         
         # Create result
         return EvaluationResult(
@@ -311,6 +318,99 @@ class Judge:
             }
         )
     
+    def _parse_direct_json(self, response: str) -> Optional[Dict[str, Any]]:
+        """Attempt direct JSON parsing."""
+        try:
+            return json.loads(response.strip())
+        except json.JSONDecodeError as e:
+            logger.debug(f"Direct JSON parsing failed: {e}")
+            return None
+
+    def _parse_markdown_json(self, response: str) -> Optional[Dict[str, Any]]:
+        """Extract JSON from markdown code blocks."""
+        json_match = re.search(r'```(?:json)?\s*({.*?})\s*```', response, re.DOTALL)
+        if json_match:
+            try:
+                return json.loads(json_match.group(1))
+            except json.JSONDecodeError as e:
+                logger.debug(f"Markdown JSON parsing failed: {e}")
+                return None
+        return None
+    
+    def _parse_regex_json(self, response: str) -> Optional[Dict[str, Any]]:
+        """Find JSON-like structure using regex."""
+        # Look for JSON containing "decision" field - more flexible pattern
+        json_match = re.search(r'(\{[^{}]*"decision"[^{}]*\})', response, re.DOTALL)
+        if json_match:
+            try:
+                return json.loads(json_match.group(1))
+            except json.JSONDecodeError as e:
+                logger.debug(f"Regex JSON parsing failed: {e}")
+                return None
+        return None
+    
+
+    def _validate_and_normalize_data(self, data: Dict[str, Any], response: str) -> Dict[str, Any]:
+        """Validate and normalize parsed data."""
+
+        # Handle missing decision field
+        if "decision" not in data:
+            for alt_field in DECISION_ALTERNATIVES:
+                if alt_field in data:
+                    data["decision"] = data[alt_field]
+                    logger.debug(f"Used '{alt_field}' field for decision")
+                    break
+        
+        # Handle missing reasoning field with fallbacks
+        if "reasoning" not in data:
+            for alt_field in REASONING_ALTERNATIVES:
+                if alt_field in data:
+                    data["reasoning"] = data[alt_field]
+                    logger.debug(f"Used '{alt_field}' field for reasoning")
+                    break
+            else:
+                data["reasoning"] = "=== No reasoning provided ==="
+                logger.warning("No reasoning field found, using default")
+        
+        # Handle missing score field with fallbacks
+        if "score" not in data:
+            for alt_field in SCORE_ALTERNATIVES:
+                if alt_field in data:
+                    data["score"] = data[alt_field]
+                    logger.debug(f"Used '{alt_field}' field for score")
+                    break
+            else:
+                data["score"] = None
+                logger.warning("No score field found, setting to None")
+        
+        # Check for required fields
+        for field in REQUIRED_FIELDS:
+            if field not in data:
+                raise ParseError(
+                    f"Response missing required '{field}' field",
+                    raw_response=response
+                )
+        
+        # Validate field types
+        if not isinstance(data["decision"], (str, bool, int,float)):
+            logger.warning(f"Decision field has unexpected type: {type(data['decision'])}")
+        
+        if not isinstance(data["reasoning"], str):
+            data["reasoning"] = str(data["reasoning"])
+            logger.debug("Converted reasoning to string")
+        
+        # Validate score if present
+        if "score" in data and data["score"] is not None:
+            if not isinstance(data["score"], (int, float)):
+                try:
+                    data["score"] = float(data["score"])
+                    logger.debug("Converted score to float")
+                except (ValueError, TypeError):
+                    logger.warning(f"Invalid score value: {data['score']}, setting to None")
+                    data["score"] = None
+        
+        return data
+
     # Convenience methods
     async def score(
         self,

@@ -168,11 +168,13 @@ class Metric:
 class ModelSpecificMetric(Metric):
     """Metric that bypasses our prompt formatting."""
     
-    def __init__(self, name: str, model_pattern: str, parser_func: Callable[[str], EvaluationResult]):
+    def __init__(self, name: str, model_pattern: str, parser_func: Callable[[Union[str, List[Dict[str, Any]]]], EvaluationResult],
+                 sampling_params: Optional[Dict[str, Any]] = None, return_choices: bool = False):
         super().__init__(name=name, criteria="model-specific evaluation")
         self.model_pattern = model_pattern
         self.parser_func = parser_func
-        # self.is_model_specific = True  # Flag for special handling
+        self.sampling_params = sampling_params
+        self.return_choices = return_choices
 
 class BatchResult(BaseModel):
     """Result of batch evaluation."""
