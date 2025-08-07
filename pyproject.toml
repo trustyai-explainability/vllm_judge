@@ -29,7 +29,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "tenacity>=8.0.0",
     "click>=8.0.0",
-    "numpy>=2.2.6",
+    "numpy>=2.0.0",
 ]
 
 [project.optional-dependencies]
