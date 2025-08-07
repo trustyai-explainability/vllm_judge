@@ -30,6 +30,7 @@ from vllm_judge.builtin_metrics import (
     TOXICITY,
     BIAS_DETECTION,
     LLAMA_GUARD_3_SAFETY,
+    GRANITE_GUARDIAN_3_2,
     
     # Code metrics
     CODE_QUALITY,
@@ -103,6 +104,7 @@ __all__ = [
     "TOXICITY",
     "BIAS_DETECTION",
     "LLAMA_GUARD_3_SAFETY",
+    "GRANITE_GUARDIAN_3_2",
     "CODE_QUALITY",
     "CODE_SECURITY",
     "CREATIVITY",
