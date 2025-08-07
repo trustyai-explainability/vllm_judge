@@ -1,12 +1,14 @@
 from typing import List, Dict, Union, Optional, Tuple, Any
 import json
 
+from vllm_judge.exceptions import InvalidInputError
+
 class PromptBuilder:
     """Builds prompts for evaluation requests."""
     
     @staticmethod
     def build_messages(
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         criteria: str,
         input: Optional[str] = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
@@ -20,7 +22,7 @@ class PromptBuilder:
         Build chat messages for evaluation.
         
         Args:
-            content: Single response or dict with 'a' and 'b' for comparison
+            content: Single response or dict with 'a' and 'b' for comparison, or list of dicts for conversation
             criteria: What to evaluate for
             input: Optional input/question/prompt that the response addresses
             rubric: Evaluation guide
@@ -35,7 +37,16 @@ class PromptBuilder:
         """
         # Detect evaluation type
         is_comparison = isinstance(content, dict) and "a" in content and "b" in content
-
+        if isinstance(content, list) and len(content) == 0:
+                raise InvalidInputError("Conversation content cannot be an empty list.")
+        is_conversation = isinstance(content, list) and all(
+            isinstance(msg, dict) and "role" in msg and "content" in msg
+            for msg in content
+        )
+        if isinstance(content, list) and not is_conversation:
+            raise InvalidInputError(
+                "Invalid content structure for conversation. Please provide a list of dicts with role and content fields."
+            )
         output_format = """
 # Output Format:
 
@@ -75,6 +86,7 @@ The JSON object MUST be well-formed and adhere strictly to the following structu
             scale=scale,
             examples=examples,
             is_comparison=is_comparison,
+            is_conversation=is_conversation,
             context=context,
             **kwargs
         )
@@ -86,12 +98,13 @@ The JSON object MUST be well-formed and adhere strictly to the following structu
     
     @staticmethod
     def _build_user_prompt(
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         criteria: str,
         rubric: Union[str, Dict[Union[int, float], str]],
         scale: Optional[Tuple[int, int]],
         examples: List[Dict[str, Any]],
         is_comparison: bool,
+        is_conversation: bool,
         context: Optional[str] = None,
         input: Optional[str] = None,
         **kwargs
@@ -101,89 +114,165 @@ The JSON object MUST be well-formed and adhere strictly to the following structu
 
         # Add input section if provided
         if input:
-            parts.append("Given the following input/question:")
-            parts.append(f'"{input}"')
-            parts.append("")
+            parts.extend([
+                "Given the following input/question:",
+                f'"{input}"',
+                ""
+            ])
         
+        # Add content section
         parts.append("## Content to evaluate:")
-        if is_comparison:
-            parts.append(f"**Response A:**\n{content['a']}")
-            parts.append(f"**Response B:**\n{content['b']}")
-        else:
-            parts.append(content)
+        parts.extend(PromptBuilder._format_content_section(content, is_comparison, is_conversation))
         
-        parts.append("## Evaluation Criteria:")
+        # Add evaluation criteria section
+        parts.extend(PromptBuilder._format_criteria_section(criteria, is_comparison, is_conversation, context))
         
-        # Task description
-        if is_comparison:
-            parts.append(f"Compare the two responses based on: {criteria}")
-            if context:
-                parts.append(f"\nContext: {context}")
-        else:
-            parts.append(f"Evaluate the content based on: {criteria}")
-            if context:
-                parts.append(f"\nContext: {context}")
+        # Add scoring section
+        if scale or rubric:
+            parts.extend(PromptBuilder._format_scoring_section(scale, rubric))
         
-        parts.append(f"\nYou must return a decision label/class (your main judgement) for the `decision` field and a concise explanation for the `reasoning` field in the JSON object.")
-
-        # Add scale and rubric
-        if scale:
-            parts.append(f"In addition to these, provide a score from {scale[0]} to {scale[1]}")
-            
-            if isinstance(rubric, dict):
-                parts.append("\nScoring guide:")
-                # Sort by score in descending order
-                sorted_items = sorted(rubric.items(), key=lambda x: float(x[0]), reverse=True)
-                for score, description in sorted_items:
-                    parts.append(f"- {score}: {description}")
-            elif rubric:
-                parts.append(f"\nEvaluation guide: {rubric}")
-        elif rubric:
-            parts.append("\nIn addition to these, provide a score if required by the following evaluation guide.")
-            parts.append(f"\nEvaluation guide: {rubric}")
-        
-        # Add examples if provided
+        # Add examples section
         if examples:
-            parts.append("\nExample evaluations:")
-            for i, ex in enumerate(examples):
-                parts.append(f"Example {i+1}:")
-                parts.append("Request:")
-                # Handle different example formats
-                if "input" in ex:
-                    parts.append(f"Input: {ex['input']}")
-                if "content" in ex:
-                    parts.append(f"Content: {ex['content']}")
-                elif "text" in ex:
-                    parts.append(f"Text: {ex['text']}")
-                
-                parts.append("Response:")
-                
-                response = {}
-                if "decision" not in ex or ex["decision"] is None or ex["decision"] == "":
-                    raise ValueError("Example must include a decision field")
-                
-                response["decision"] = ex["decision"]
-                if "score" in ex:
-                    response["score"] = ex["score"]
-                
-                if "reasoning" in ex:
-                    response["reasoning"] = ex["reasoning"]
-                
-                parts.append(json.dumps(response))
+            parts.extend(PromptBuilder._format_examples_section(examples))
         
         # Add any additional instructions
         if kwargs.get("additional_instructions"):
             parts.append(f"Additional instructions: {kwargs['additional_instructions']}")
 
-        # Output format instructions
-        parts.append("\nYou must respond in JSON format:")
-        parts.append("""{
+        # Add output format instructions
+        parts.extend([
+            "\nYou must respond in JSON format:",
+            """{
     "decision": <your judgment - string|boolean>,
     "reasoning": "<concise explanation of your judgment>",
     "score": <numeric score if requested, otherwise null>
-}""")
+}"""
+        ])
         
         return "\n".join(parts)
+    
+    @staticmethod
+    def _format_content_section(
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
+        is_comparison: bool,
+        is_conversation: bool
+    ) -> List[str]:
+        """Format the content section of the prompt."""
+        if is_comparison:
+            return [
+                f"**Response A:**\n{content['a']}",
+                f"**Response B:**\n{content['b']}"
+            ]
+        elif is_conversation:
+            section = ["**Conversation Start:**"]
+            for i, msg in enumerate(content):
+                role = msg["role"].title() 
+                section.append(f"{role}: {msg['content']}")
+                if i < len(content) - 1:  # Add spacing except for last message
+                    section.append("")
+            section.append("**Conversation End:**")
+            return section
+        else:
+            return [content]
+    
+    @staticmethod
+    def _format_criteria_section(
+        criteria: str,
+        is_comparison: bool,
+        is_conversation: bool,
+        context: Optional[str] = None
+    ) -> List[str]:
+        """Format the evaluation criteria section of the prompt."""
+        section = ["## Evaluation Criteria:"]
+        
+        # Add task-specific description
+        if is_comparison:
+            section.append(f"Compare the two responses based on: {criteria}")
+        elif is_conversation:
+            section.extend([
+                f"Evaluate the conversation based on: {criteria}",
+                "Consider the full context, flow, and interaction quality."
+            ])
+        else:
+            section.append(f"Evaluate the content based on: {criteria}")
+        
+        # Add context if provided (hoisted from conditional branches)
+        if context:
+            section.append(f"\nContext: {context}")
+        
+        section.append("\nYou must return a decision label/class (your main judgement) for the `decision` field and a concise explanation for the `reasoning` field in the JSON object.")
+        
+        return section
+    
+    @staticmethod
+    def _format_scoring_section(
+        scale: Optional[Tuple[int, int]],
+        rubric: Union[str, Dict[Union[int, float], str]]
+    ) -> List[str]:
+        """Format the scoring section of the prompt."""
+        section = []
+        
+        if scale:
+            section.append(f"In addition to these, provide a score from {scale[0]} to {scale[1]}")
+            
+            if isinstance(rubric, dict):
+                section.append("\nScoring guide:")
+                # Sort by score in descending order
+                sorted_items = sorted(rubric.items(), key=lambda x: float(x[0]), reverse=True)
+                for score, description in sorted_items:
+                    section.append(f"- {score}: {description}")
+            elif rubric:
+                section.append(f"\nEvaluation guide: {rubric}")
+        elif rubric:
+            section.extend([
+                "\nIn addition to these, provide a score if required by the following evaluation guide.",
+                f"\nEvaluation guide: {rubric}"
+            ])
+        
+        return section
+    
+    @staticmethod
+    def _format_examples_section(examples: List[Dict[str, Any]]) -> List[str]:
+        """Format the examples section of the prompt."""
+        section = ["\nExample evaluations:"]
+        
+        for i, ex in enumerate(examples):
+            section.extend([
+                f"Example {i+1}:",
+                "Request:"
+            ])
+            
+            # Handle different example formats
+            if "input" in ex:
+                section.append(f"Input: {ex['input']}")
+            if "content" in ex:
+                if isinstance(ex["content"], list):
+                    section.append("**Conversation Start:**")
+                    for msg in ex["content"]:
+                        role = msg["role"].title()
+                        section.append(f"{role}: {msg['content']}")
+                    section.append("**Conversation End:**")
+                else:
+                    section.append(f"Content: {ex['content']}")
+            elif "text" in ex:
+                section.append(f"Text: {ex['text']}")
+            
+            section.append("Response:")
+            
+            # Build response object
+            response = {}
+            if "decision" not in ex or ex["decision"] is None or ex["decision"] == "":
+                raise ValueError("Example must include a decision field")
+            
+            response["decision"] = ex["decision"]
+            if "score" in ex:
+                response["score"] = ex["score"]
+            if "reasoning" in ex:
+                response["reasoning"] = ex["reasoning"]
+            
+            section.append(json.dumps(response))
+        
+        return section
     
     @staticmethod
     def format_messages_as_text(messages: List[Dict[str, str]]) -> str:

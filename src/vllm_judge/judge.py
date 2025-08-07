@@ -63,7 +63,7 @@ class Judge:
     
     async def evaluate(
         self,
-        content: Union[str, Dict[str, str]],
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
         input: Optional[str] = None,
         criteria: str = None,
         rubric: Union[str, Dict[Union[int, float], str]] = None,
@@ -74,13 +74,14 @@ class Judge:
         context: str = None,
         template_vars: Dict[str, Any] = None,
         template_engine: Union[str, TemplateEngine] = TemplateEngine.FORMAT,
+        sampling_params: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> EvaluationResult:
         """
         Universal evaluation method that adapts to use case.
         
         Args:
-            content: String for single evaluation, dict {"a": ..., "b": ...} for comparison
+            content: String for single evaluation, list of dicts for conversation, dict {"a": ..., "b": ...} for comparison
             input: Optional input/question/prompt that the content is responding to
             criteria: What to evaluate for (can contain template variables)
             rubric: Instructions for evaluation, can be string or dict containing mapping of score to description (can contain template variables)
@@ -91,7 +92,8 @@ class Judge:
             context: Optional context for the evaluation
             template_vars: Variables to substitute in templates
             template_engine: Template engine to use ('format' or 'jinja2'), default is 'format'
-            **kwargs: Additional parameters
+            sampling_params: Optional sampling parameters for vLLM
+            **kwargs: Additional instructions for the model (e.g., with `additional_instructions` key)
             
         Returns:
             EvaluationResult with decision, reasoning, and optional score
@@ -101,104 +103,227 @@ class Judge:
             MetricNotFoundError: If metric name not found
             ParseError: If unable to parse model response
         """
-        # Handle model-specific metrics
-        if isinstance(metric, ModelSpecificMetric):
-            assert isinstance(content, str), "Model-specific metrics only support string content for now"
-
-            # logger.info(f"Evaluating model-specific metric {metric.name}.")
-            logger.info(f"We assume you're using {metric.model_pattern} type model. If not, please do not use this metric and use a normal metric instead.")
-            # Skip ALL our formatting
-            messages = [{"role": "user", "content": content}]
-            
-            # vLLM applies model's chat template automatically
-            llm_response = await self._call_model(messages)
-            
-            # Use metric's parser
-            return metric.parser_func(llm_response)
+        # Resolve metric if string
+        resolved_metric = self._resolve_metric(metric)
         
-        # Handle normal metrics
-        # Handle metric parameter
-        metric_template_vars = {}
+        # Handle model-specific metrics early
+        if isinstance(resolved_metric, ModelSpecificMetric):
+            return await self._evaluate_model_specific_metric(
+                resolved_metric, content, sampling_params
+            )
         
-        if metric:
-            if isinstance(metric, str):
-                metric = self.get_metric(metric)
-            # Use metric defaults but allow overrides
-            criteria = criteria or metric.criteria
-            rubric = rubric or metric.rubric
-            scale = scale or metric.scale
-            examples = examples or metric.examples
-            system_prompt = system_prompt or metric.system_prompt
-            metric_template_vars = metric.template_vars
-            if metric.template_engine:
-                template_engine = metric.template_engine
-        
-        # Validate inputs
-        if not criteria:
-            raise InvalidInputError("Either 'criteria' or 'metric' must be provided")
-        
-        # Determine template engine
-        engine = TemplateEngine(template_engine)
-        
-        # Merge template variables (metric defaults + user provided)
-        all_template_vars = {**metric_template_vars, **(template_vars or {})}
-        # Add input to template variables if provided
-        if input:
-            all_template_vars["input"] = input
+        # Process normal evaluation
+        evaluation_params = self._prepare_evaluation_params(
+            resolved_metric, criteria, rubric, scale, examples, 
+            system_prompt, template_engine
+        )
         
         # Process templates
-        criteria = TemplateProcessor.apply_template(
-            criteria, all_template_vars, engine, strict=True
-        )
-        rubric = TemplateProcessor.apply_template(
-            rubric, all_template_vars, engine, strict=True
-        )
-        system_prompt = TemplateProcessor.apply_template(
-            system_prompt, all_template_vars, engine, strict=True
-        )
-        context = TemplateProcessor.apply_template(
-            context, all_template_vars, engine, strict=True
-        )
-        input = TemplateProcessor.apply_template(
-            input, all_template_vars, engine, strict=True
+        processed_params = self._process_templates(
+            evaluation_params, template_vars, input, context
         )
         
+        # Build and execute evaluation
+        return await self._execute_evaluation(
+            content, processed_params, sampling_params, **kwargs
+        )
+    
+    def _resolve_metric(self, metric: Union[Metric, str, None]) -> Optional[Metric]:
+        """Resolve metric string to Metric object."""
+        if metric and isinstance(metric, str):
+            return self.get_metric(metric)
+        return metric
+    
+    async def _evaluate_model_specific_metric(
+        self, 
+        metric: ModelSpecificMetric, 
+        content: Union[str, List[Dict[str, str]]], 
+        sampling_params: Optional[Dict[str, Any]]
+    ) -> EvaluationResult:
+        """Handle evaluation for model-specific metrics."""
+        # Validate content for model-specific metrics
+        if isinstance(content, dict):
+            raise InvalidInputError(
+                "Model-specific metrics only support string and list of dicts as content for now"
+            )
+        
+        if isinstance(content, list) and len(content) == 0:
+            raise InvalidInputError("Conversation content cannot be an empty list.")
+        
+        # Validate conversation format
+        is_conversation = (
+            isinstance(content, list) and 
+            all(isinstance(msg, dict) and "role" in msg and "content" in msg for msg in content)
+        )
+        if isinstance(content, list) and not is_conversation:
+            raise InvalidInputError(
+                "Invalid content structure for conversation. "
+                "Please provide a list of dicts with role and content fields."
+            )
+        
+        # Prepare messages
+        if is_conversation:
+            messages = content
+        else:
+            messages = [{"role": "user", "content": content}]
+
+        logger.info(
+            f"We assume you're using {metric.model_pattern} type model. "
+            f"If not, please do not use this metric and use a normal metric instead."
+        )
+        
+        # Get model response and parse
+        llm_response = await self._call_model(messages, sampling_params, return_choices=False)
+        return metric.parser_func(llm_response)
+    
+    def _prepare_evaluation_params(
+        self,
+        metric: Optional[Metric],
+        criteria: Optional[str],
+        rubric: Union[str, Dict[Union[int, float], str], None],
+        scale: Optional[Tuple[int, int]],
+        examples: Optional[List[Dict[str, Any]]],
+        system_prompt: Optional[str],
+        template_engine: Union[str, TemplateEngine]
+    ) -> Dict[str, Any]:
+        """Prepare evaluation parameters, merging metric defaults with user overrides."""
+        params = {
+            "criteria": criteria,
+            "rubric": rubric,
+            "scale": scale,
+            "examples": examples,
+            "system_prompt": system_prompt,
+            "template_engine": template_engine,
+            "metric_template_vars": {}
+        }
+        
+        if metric:
+            # Use metric defaults but allow overrides
+            params["criteria"] = criteria or metric.criteria
+            params["rubric"] = rubric or metric.rubric
+            params["scale"] = scale or metric.scale
+            params["examples"] = examples or metric.examples
+            params["system_prompt"] = system_prompt or metric.system_prompt
+            params["metric_template_vars"] = metric.template_vars
+            if metric.template_engine:
+                params["template_engine"] = metric.template_engine
+        
+        # Validate required parameters
+        if not params["criteria"]:
+            raise InvalidInputError("Either 'criteria' or 'metric' must be provided")
+        
+        return params
+    
+    def _process_templates(
+        self,
+        params: Dict[str, Any],
+        template_vars: Optional[Dict[str, Any]],
+        input_text: Optional[str],
+        context: Optional[str]
+    ) -> Dict[str, Any]:
+        """Process all template variables and return processed parameters."""
+        # Determine template engine
+        engine = TemplateEngine(params["template_engine"])
+        
+        # Merge template variables (metric defaults + user provided)
+        all_template_vars = {**params["metric_template_vars"], **(template_vars or {})}
+        if input_text:
+            all_template_vars["input"] = input_text
+        
+        # Process templates for all relevant fields
+        template_fields = ["criteria", "rubric", "system_prompt"]
+        processed = {}
+        
+        for field in template_fields:
+            processed[field] = TemplateProcessor.apply_template(
+                params[field], all_template_vars, engine, strict=True
+            )
+        
+        # Process additional fields
+        processed["context"] = TemplateProcessor.apply_template(
+            context, all_template_vars, engine, strict=True
+        )
+        processed["input"] = TemplateProcessor.apply_template(
+            input_text, all_template_vars, engine, strict=True
+        )
+        
+        # Copy other parameters
+        processed.update({
+            "scale": params["scale"],
+            "examples": params["examples"],
+            "template_vars": all_template_vars,
+            "template_engine": engine
+        })
+        
+        return processed
+    
+    async def _execute_evaluation(
+        self,
+        content: Union[str, Dict[str, str], List[Dict[str, str]]],
+        params: Dict[str, Any],
+        sampling_params: Optional[Dict[str, Any]],
+        **kwargs
+    ) -> EvaluationResult:
+        """Execute the evaluation with processed parameters."""
         # Build messages
         messages = PromptBuilder.build_messages(
             content=content,
-            input=input,
-            criteria=criteria,
-            rubric=rubric,
-            scale=scale,
-            examples=examples,
-            system_prompt=system_prompt,
-            context=context,
+            input=params["input"],
+            criteria=params["criteria"],
+            rubric=params["rubric"],
+            scale=params["scale"],
+            examples=params["examples"],
+            system_prompt=params["system_prompt"],
+            context=params["context"],
             **kwargs
         )
         
         # Get LLM response
-        llm_response = await self._call_model(messages)
+        llm_response = await self._call_model(messages, sampling_params, return_choices=False)
         
         # Parse response
         result = self._parse_response(llm_response)
         
         # Add template info to metadata if used
-        if all_template_vars:
-            result.metadata["template_vars"] = all_template_vars
-            result.metadata["template_engine"] = engine.value
+        if params["template_vars"]:
+            result.metadata["template_vars"] = params["template_vars"]
+            result.metadata["template_engine"] = params["template_engine"].value
         
         return result
     
-    async def _call_model(self, messages: List[Dict[str, str]]) -> str:
+    async def _call_model(self, messages: List[Dict[str, str]], 
+                          sampling_params: Optional[Dict[str, Any]] = None,
+                          return_choices: bool = False) -> Union[str, List[Dict[str, Any]]]:
         """
         Call the model with the given messages.
+
+        Args:
+            messages: List of messages
+            sampling_params: Sampling parameters
+            return_choices: Whether to return choices
+
+        Returns:
+            str model response if return_choices is False, otherwise List[Dict[str, Any]]
         """
+        if sampling_params and 'n' in sampling_params and sampling_params['n'] > 1:
+            raise InvalidInputError("n > 1 is not supported for now")
+        
+        # Merge sampling params
+        final_sampling_params = {**self.config.sampling_params}
+        if sampling_params:
+            final_sampling_params.update(sampling_params)
         try:
             if self.config.use_chat_api:
-                llm_response = await self.client.chat_completion(messages)
+                llm_response = await self.client.chat_completion(
+                    messages,
+                    sampling_params=final_sampling_params,
+                    return_choices=return_choices)
             else:
                 prompt = PromptBuilder.format_messages_as_text(messages)
-                llm_response = await self.client.completion(prompt)
+                llm_response = await self.client.completion(
+                    prompt,
+                    sampling_params=final_sampling_params,
+                    return_choices=return_choices)
             return llm_response
         except Exception as e:
             raise VLLMJudgeError(f"Failed to get model response: {e}")
@@ -436,6 +561,7 @@ class Judge:
         data: List[Dict[str, Any]],
         max_concurrent: int = None,
         progress_callback: Callable[[int, int], None] = None,
+        sampling_params: Optional[Dict[str, Any]] = None,
         **default_kwargs
     ) -> BatchResult:
         """
@@ -459,7 +585,7 @@ class Judge:
             ])
         """
         processor = BatchProcessor(self, max_concurrent or self.config.max_concurrent)
-        return await processor.process(data, progress_callback, **default_kwargs)
+        return await processor.process(data, progress_callback, sampling_params, **default_kwargs)
     
     async def batch_score(
         self,

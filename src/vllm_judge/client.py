@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Union
 import httpx
 from tenacity import (
     retry,
@@ -107,7 +107,9 @@ class VLLMClient:
         except Exception as e:
             raise ConnectionError(f"Unexpected error: {e}")
     
-    async def chat_completion(self, messages: List[Dict[str, str]]) -> str:
+    async def chat_completion(self, messages: List[Dict[str, str]], 
+                              sampling_params: Optional[Dict[str, Any]] = None,
+                              return_choices: bool = False) -> Union[str, List[Dict[str, Any]]]:
         """
         Use chat completions endpoint (handles templates automatically).
         
@@ -115,7 +117,7 @@ class VLLMClient:
             messages: List of chat messages
             
         Returns:
-            Model response content
+            String model response if 'n' (no. of generations) is 1 (default), otherwise the choices (list of dicts) field of the response
             
         Raises:
             ConnectionError: If request fails
@@ -124,10 +126,10 @@ class VLLMClient:
         request_data = {
             "model": self.config.model,
             "messages": messages,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
         }
 
+        if sampling_params:
+            request_data.update(sampling_params)
         
         try:
             response = await self._request_with_retry(
@@ -139,8 +141,10 @@ class VLLMClient:
             if "choices" not in response or not response["choices"]:
                 raise ParseError("Invalid response format: missing choices")
             
-            content = response["choices"][0]["message"]["content"]
-            return content
+            if return_choices:
+                return response["choices"]
+            else:
+                return response["choices"][0]["message"]["content"]
             
         except RetryExhaustedError:
             raise
@@ -149,7 +153,9 @@ class VLLMClient:
                 raise
             raise ConnectionError(f"Chat completion failed: {e}")
     
-    async def completion(self, prompt: str) -> str:
+    async def completion(self, prompt: str, 
+                         sampling_params: Optional[Dict[str, Any]] = None,
+                         return_choices: bool = False) -> Union[str, List[Dict[str, Any]]]:
         """
         Use completions endpoint for edge cases.
         
@@ -157,7 +163,7 @@ class VLLMClient:
             prompt: Text prompt
             
         Returns:
-            Model response text
+            String model response if 'n' (no. of generations) is 1 (default), otherwise the choices (list of dicts) field of the response
             
         Raises:
             ConnectionError: If request fails
@@ -166,9 +172,10 @@ class VLLMClient:
         request_data = {
             "model": self.config.model,
             "prompt": prompt,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
         }
+
+        if sampling_params:
+            request_data.update(sampling_params)
         
         try:
             response = await self._request_with_retry(
@@ -180,8 +187,10 @@ class VLLMClient:
             if "choices" not in response or not response["choices"]:
                 raise ParseError("Invalid response format: missing choices")
             
-            text = response["choices"][0]["text"]
-            return text
+            if return_choices:
+                return response["choices"]
+            else:
+                return response["choices"][0]["text"]
             
         except RetryExhaustedError:
             raise

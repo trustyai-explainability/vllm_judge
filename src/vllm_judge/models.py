@@ -56,10 +56,15 @@ class JudgeConfig(BaseModel):
     max_retries: int = Field(3, description="Maximum retry attempts")
     retry_delay: float = Field(1.0, description="Initial retry delay in seconds")
     
-    # Model parameters
-    temperature: float = Field(0.0, description="Sampling temperature")
-    max_tokens: int = Field(256, description="Maximum tokens in response")
-    
+    # vLLM sampling parameters
+    sampling_params: Dict[str, Any] = Field(
+        default_factory=lambda: {
+            "temperature": 0.0,
+            "max_tokens": 256
+        },
+        description="Default sampling parameters for vLLM"
+    )
+
     # Batch settings
     max_concurrent: int = Field(50, description="Maximum concurrent requests")
         

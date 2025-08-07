@@ -42,6 +42,45 @@ class TestIntegration:
             assert result.reasoning == "The response is comprehensive and accurate."
             assert result.score == 9.2
     
+    async def test_conversation_evaluation_flow(self):
+        """Test complete conversation evaluation flow."""
+        with patch('httpx.AsyncClient') as mock_client_class:
+            mock_client = AsyncMock()
+            mock_response = Mock()
+            mock_response.json.return_value = {
+                "choices": [{
+                    "message": {
+                        "content": '{"decision": "EDUCATIONAL", "reasoning": "Conversation shows good educational progression", "score": 9.0}'
+                    }
+                }]
+            }
+            mock_response.raise_for_status.return_value = None
+            mock_client.post.return_value = mock_response
+            mock_client_class.return_value = mock_client
+
+            config = JudgeConfig(
+                base_url="http://localhost:8000",
+                model="test-model"
+            )
+            
+            conversation = [
+                {"role": "user", "content": "Help me with my homework"},
+                {"role": "assistant", "content": "I'd be happy to help! What subject?"},
+                {"role": "user", "content": "Math - I need help with fractions"},
+                {"role": "assistant", "content": "Great! Let's start with the basics..."}
+            ]
+            
+            judge = Judge(config)
+            
+            result = await judge.evaluate(
+                content=conversation,
+                criteria="educational value and appropriateness"
+            )
+            
+            assert result.decision == "EDUCATIONAL"
+            assert result.reasoning == "Conversation shows good educational progression"
+            assert result.score == 9.0
+    
     async def test_workflow_with_custom_metric(self):
         """Test workflow with custom registered metric."""
         with patch('httpx.AsyncClient') as mock_client_class:
