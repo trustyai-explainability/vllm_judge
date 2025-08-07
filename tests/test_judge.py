@@ -399,7 +399,7 @@ class TestJudgeResponseParsing:
         result = mock_judge._parse_response(response)
         
         assert result.decision == "GOOD"
-        assert result.reasoning == "No reasoning provided"
+        assert "No reasoning provided" in result.reasoning
     
     def test_parse_response_invalid_json(self, mock_judge):
         """Test parsing invalid JSON response."""

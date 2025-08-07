@@ -209,3 +209,44 @@ class TestPromptBuilder:
                 content=empty_conversation,
                 criteria="test"
             )
+    
+    def test_conversation_with_non_dict_items(self):
+        """Test that conversation with non-dict items raises an error."""
+        # Test with string in conversation
+        conversation_with_string = [
+            {"role": "user", "content": "Hello"},
+            "This is not a dict",
+            {"role": "assistant", "content": "Hi"}
+        ]
+        
+        with pytest.raises(InvalidInputError):
+            PromptBuilder.build_messages(
+                content=conversation_with_string,
+                criteria="test"
+            )
+        
+        # Test with integer in conversation
+        conversation_with_int = [
+            {"role": "user", "content": "Hello"},
+            42,
+            {"role": "assistant", "content": "Hi"}
+        ]
+        
+        with pytest.raises(InvalidInputError):
+            PromptBuilder.build_messages(
+                content=conversation_with_int,
+                criteria="test"
+            )
+        
+        # Test with None in conversation
+        conversation_with_none = [
+            {"role": "user", "content": "Hello"},
+            None,
+            {"role": "assistant", "content": "Hi"}
+        ]
+        
+        with pytest.raises(InvalidInputError):
+            PromptBuilder.build_messages(
+                content=conversation_with_none,
+                criteria="test"
+            )
